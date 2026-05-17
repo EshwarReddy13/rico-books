@@ -1,0 +1,148 @@
+# Cursor Rules — Finance & ITR App
+
+These rules are not optional. They exist because this app handles financial
+records and tax figures, where code that *looks* correct can be quietly
+wrong. Read them before writing code.
+
+---
+
+## What this project is
+
+A single-user, hosted web app that turns bank transactions into a categorized
+P&L and a balance sheet, and prepares figures for filing an Indian ITR-3. It
+tags transactions by entity (multiple businesses). Built with Next.js (App
+Router), TypeScript, PostgreSQL, and Claude Haiku 4.5 for AI assistance.
+
+The full design lives in `/docs`. Read `/docs/architecture.md` first; each
+flow has its own `/docs/flow-*.md`. The docs are the source of truth for how
+the app is meant to work.
+
+---
+
+## Hard rules — never violate these
+
+1. **AI proposes, code computes, the human confirms.** The AI model is used
+   only to *read* messy input and *draft* suggestions (categories,
+   descriptions, document extraction). Every number that lands in the books or
+   on a tax return is calculated by plain deterministic code. A language model
+   must never compute a P&L total, a depreciation figure, an EMI split, a tax
+   number, or any financial amount.
+
+2. **Money is never a floating-point number.** Store and compute money as
+   integers in the smallest unit (paise) or as a fixed-precision decimal.
+   Floats lose precision and corrupt totals.
+
+3. **The EMI split comes from the loan schedule, in code.** The
+   principal/interest split of a loan EMI is read from the matched
+   `loan_schedule_row` and computed by code — never produced by AI, never
+   derived from a hardcoded "standard EMI" amount. Match each transaction
+   against each row's own `emi_amount` (schedules have irregular first/last
+   instalments).
+
+4. **Duplicate detection is the fingerprint + unique index.** Detect duplicate
+   transactions via the `fingerprint` hash and the unique index on
+   `(source_account_id, fingerprint)`. Never scan existing rows to compare,
+   and never use a "is this date after the latest transaction" heuristic.
+
+5. **Nothing counts until confirmed.** A transaction affects the P&L or
+   balance sheet only when `status = confirmed`. AI output is always a
+   proposal awaiting human confirmation.
+
+6. **Server-side only for sensitive work.** Database access, the Claude API
+   key, and all computation (P&L, depreciation, EMI matching, tax) live in
+   server-side code — route handlers, server actions, server components.
+   Never in a client component. The API key is never in the frontend bundle.
+
+7. **Write the audit log.** Every change to a transaction line (category,
+   description, split) is recorded in the audit log. Do not add an edit path
+   that bypasses it.
+
+---
+
+## Development sequence — build one phase at a time
+
+The app is built in phases, in this order. **Do not start a phase until the
+previous one is complete and tested.** Each phase must end in a state the user
+can actually test — ideally against real data. If asked to jump ahead, point
+out the dependency and confirm before proceeding.
+
+- **Phase 0 — Skeleton.** Next.js project, PostgreSQL connected, the schema
+  from `architecture.md` §3 as real migrations, login/auth.
+- **Phase 1 — Reference data (Settings).** Entities, categories (with seeded
+  defaults), bank-account profiles.
+- **Phase 2 — Import.** CSV/Excel parsing, the fingerprint/dedup, transactions
+  landing as `pending_review`.
+- **Phase 3 — Categorize.** The AI categorization pass and the Review queue
+  confirmation UI.
+- **Phase 4 — Computation.** The P&L and balance-sheet engines (pure
+  functions); opening-balances setup. Test this phase hardest.
+- **Phase 5 — Loans.** Loan setup, schedule extraction + checksum
+  verification, EMI matching and splitting.
+- **Phase 6 — Dashboard & Reports.** Built now, because real numbers exist to
+  display.
+- **Phase 7 — Tax prep.** The ITR figure preparation and dual computation.
+
+Within a phase, the same rule applies: build a piece, test it, then proceed.
+The computation functions (P&L, depreciation, EMI split, fingerprint) are the
+most important things to test — verify them before building on them.
+
+---
+
+## Documentation discipline
+
+The `/docs` flow documents describe how each flow is *meant* to work. They are
+a record of intent, not just a mirror of the code. Keep them and the code in
+agreement.
+
+- **Before editing any flow, read its `/docs/flow-*.md` first.** That doc is
+  what you compare your work against.
+- **If a requested change — or code you are about to write — would diverge
+  from what the flow doc describes, STOP and tell the user before writing it.**
+  Name the doc and quote the part that conflicts. Let the user decide whether
+  to keep the documented behavior or to proceed and update the doc.
+- **If you read existing code that already contradicts its flow doc, surface
+  it** rather than silently coding alongside the inconsistency.
+- **Never edit a flow doc silently to match new code.** A doc changes only as
+  a deliberate, user-confirmed step — and when it does, it changes in the
+  same commit as the code, and its "last reviewed against code" line is
+  updated.
+- Code entry points for a flow should carry a one-line pointer comment to the
+  relevant doc, e.g. `// Transaction import flow — see docs/flow-transaction-import.md`.
+
+---
+
+## Code conventions
+
+- **TypeScript, strict.** No `any` on anything financial — transactions,
+  amounts, categories, schedule rows, tax figures. Types are a guardrail here,
+  not decoration.
+- **The schema is shared and single-sourced.** Define data types once (the
+  ORM schema) and use them across server and client. Do not redefine a
+  transaction or category shape ad hoc.
+- **Errors are surfaced, not swallowed.** Do not catch an error and continue
+  silently. For a financial app a silent failure is worse than a visible one
+  — a wrong number nobody noticed is the worst outcome.
+- **Computation lives in pure, testable functions** separate from UI and from
+  data fetching. The P&L engine, depreciation, EMI matching, and the
+  fingerprint hash should each be a function you can call with inputs and
+  assert on outputs.
+- **Verify against the lender's checksums.** When extracting a loan schedule,
+  always run the checksum verification (sums of the rows vs. the stored
+  totals) before trusting the data.
+- Keep formatting and naming clean and consistent — but the rules above
+  matter more than style.
+
+---
+
+## Ask the user first before
+
+- **Changing the data model** — adding, removing, or renaming a column or
+  table. The schema is the foundation; changes need a deliberate decision.
+- **Adding a new dependency / library.** Propose it and explain why; do not
+  pull one in unannounced.
+- **Anything on the "explicit permission" line** that touches real money or
+  external services — but in normal development this mostly means: confirm
+  before running destructive database operations (dropping tables, deleting
+  data, resetting migrations).
+- **Diverging from a flow doc** — already covered above, restated here because
+  it is the easiest rule to forget.
