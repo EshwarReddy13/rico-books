@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rico Books
 
-## Getting Started
+Single-user finance & ITR app — bank transactions → categorized P&L and balance sheet → ITR-3 figure prep.
 
-First, run the development server:
+**Governing principle:** AI proposes. Code computes. The human confirms.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Documentation
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Design docs live in [`/docs`](./docs/). Start with [`docs/architecture.md`](./docs/architecture.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Stack (Phase 0)
 
-## Learn More
+- **Next.js 16** (App Router) + TypeScript + Tailwind
+- **PostgreSQL** on [Neon](https://neon.tech)
+- **Prisma 7** — app data (transactions, categories, …)
+- **[Neon Auth](https://neon.com/docs/auth/overview)** — managed sign-in (Better Auth); users live in the `neon_auth` schema
 
-To learn more about Next.js, take a look at the following resources:
+## Prerequisites
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Node.js **22** (see `.nvmrc`)
+- npm
+- A Neon project with **Postgres** and **Auth** enabled (AWS regions)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Local setup
 
-## Deploy on Vercel
+1. Install dependencies:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```bash
+   npm install
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Copy environment variables:
+
+   ```bash
+   copy .env.example .env
+   ```
+
+   Fill in:
+
+   - `DATABASE_URL` — Neon Postgres URL (`?sslmode=require` recommended)
+   - `NEON_AUTH_BASE_URL` — from Neon Console → Branch → **Auth** → Configuration
+   - `NEON_AUTH_COOKIE_SECRET` — `openssl rand -base64 32`
+   - Optional: `ALLOWED_SIGNUP_EMAIL` — only this address may sign up (recommended for single-user)
+
+3. Enable **Auth** in the Neon Console for your project/branch if you have not already.
+
+4. Apply Prisma migrations (app tables only; auth is managed by Neon):
+
+   ```bash
+   npm run db:migrate
+   ```
+
+5. Create your account (first time only):
+
+   - Open [http://localhost:3000/auth/sign-up](http://localhost:3000/auth/sign-up)
+   - Or sign in at `/auth/sign-in` if the account already exists
+
+6. Start the dev server:
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) — unauthenticated visits redirect to `/auth/sign-in`.
+
+   **Safari:** if cookies fail on HTTP, use `npm run dev -- --experimental-https` and open `https://localhost:3000`.
+
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run db:migrate` | Run Prisma migrations (dev) |
+| `npm run db:generate` | Regenerate Prisma client |
+
+## Phase status
+
+- **Phase 0 (in progress):** skeleton — Next.js, Prisma, Neon Auth
+- **Phase 1+:** see `.cursor/.cursorrules` and `docs/architecture.md`

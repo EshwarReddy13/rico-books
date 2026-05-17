@@ -1,0 +1,11 @@
+// App data model — see docs/architecture.md §3.
+// Auth users/sessions live in Neon Auth (neon_auth schema), not here.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

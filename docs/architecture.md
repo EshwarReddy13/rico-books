@@ -509,14 +509,20 @@ Because this is a hosted app holding the user's full financial picture and
 tax basis, security is designed in from the start, not patched on:
 
 - **Authentication** even though there is one user. The app must not be
-  openable by anyone who finds the URL.
+  openable by anyone who finds the URL. **Neon Auth** (managed Better Auth on
+  Neon) handles sign-in: users, sessions, and OAuth config live in the
+  `neon_auth` schema in the same Neon project as Postgres. The Next.js app
+  uses `@neondatabase/auth` (server SDK + `proxy.ts` route protection). App
+  business data stays in the public schema via Prisma; auth is not modeled in
+  `prisma/schema.prisma`. Google OAuth and email flows can be enabled in the
+  Neon Console without custom auth infrastructure.
 - The **database is not publicly reachable** — only the Next.js server
   connects to it.
 - **HTTPS everywhere.**
 - **Encryption at rest** for the database where the host supports it.
 - The **Claude API key** is server-side only (restated because it matters).
-- Secrets (DB credentials, API key, auth secret) live in environment
-  variables / a secrets manager, never in the repo.
+- Secrets (DB credentials, Neon Auth URL/cookie secret, API key) live in
+  environment variables / a secrets manager, never in the repo.
 
 A reasonable hosting shape: a managed Postgres instance + a small app server,
 on a single provider. Keep it boring — priority (3), cheap to run, and
