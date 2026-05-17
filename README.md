@@ -1,6 +1,6 @@
 # Rico Books
 
-Single-user finance & ITR app — bank transactions → categorized P&L and balance sheet → ITR-3 figure prep.
+Single-user finance & ITR app — bank transactions → categorized P&L and balance sheet → ITR figure prep.
 
 **Governing principle:** AI proposes. Code computes. The human confirms.
 
