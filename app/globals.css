@@ -84,7 +84,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  /* Auth split-layout page background */
+  /* App page canvas (auth, dashboard, etc.) */
   --auth-canvas: #f3f3f3;
   --auth-muted: #737373;
 }
@@ -124,10 +124,28 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Auth routes: light form controls even when html has .dark (system theme) */
-[data-auth-page] [data-slot="input"] {
+/*
+ * Light-app guards (auth + any shadcn control that still picks up dark: styles).
+ * Prefer fixing theme at the source: ThemeProvider uses forcedTheme="light" until
+ * Settings adds dark mode. Keep these rules for form controls that use dark:bg-*.
+ */
+[data-auth-page] :is([data-slot="input"], [data-slot="textarea"]) {
   background-color: #ffffff !important;
   color: #000000;
+}
+
+[data-auth-page] [data-slot="checkbox"] {
+  border-color: #e5e5e5 !important;
+}
+
+[data-auth-page] [data-slot="checkbox"]:not([data-checked]) {
+  background-color: #ffffff !important;
+}
+
+[data-auth-page] [data-slot="checkbox"][data-checked] {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
 
 [data-auth-page] [data-slot="button"].rounded-full {
@@ -142,10 +160,29 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
-    @apply font-sans;
+    @apply bg-auth-canvas font-sans text-foreground;
+    color-scheme: light;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  body {
+    @apply min-h-full bg-auth-canvas text-foreground;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  .dark body {
+    @apply bg-background;
+  }
+}
+
+@layer utilities {
+  /* Contained horizontal scroll (e.g. main category cards) — never page-level bar */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

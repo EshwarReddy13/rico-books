@@ -60,7 +60,11 @@ export function SignInForm() {
         />
 
         <div className="flex items-center gap-2">
-          <Checkbox id="remember" name="remember" />
+          <Checkbox
+            id="remember"
+            name="remember"
+            className="border-neutral-200 bg-white data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground"
+          />
           <Label
             htmlFor="remember"
             className="cursor-pointer font-normal text-black"

@@ -1,0 +1,76 @@
+"use client";
+
+import { Plus } from "lucide-react";
+
+import { useCurrency } from "@/components/dashboard/currency-context";
+import { ReportCard, ReportCardHeader } from "@/components/reports/report-card";
+import { formatAmount } from "@/lib/dashboard/currency";
+import type { SubCategoryBreakdown } from "@/lib/categories/types";
+import { cn } from "@/lib/utils";
+
+export function SubCategoryBreakdownCard({
+  subs,
+}: {
+  subs: SubCategoryBreakdown[];
+}) {
+  const { currency } = useCurrency();
+
+  return (
+    <ReportCard className="flex h-full min-h-[320px] min-w-0 flex-col">
+      <ReportCardHeader
+        title="Sub-categories"
+        action={
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800"
+          >
+            <Plus className="size-3.5" aria-hidden />
+            Add sub-category
+          </button>
+        }
+      />
+
+      {subs.length === 0 ? (
+        <p className="py-8 text-center text-sm text-zinc-500">
+          No sub-categories yet. Add one to classify transactions under this
+          main category.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {subs.map((sub) => (
+            <li key={sub.id}>
+              <button
+                type="button"
+                className="group w-full text-left"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-zinc-950 group-hover:text-violet-700">
+                      {sub.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {sub.transactionCount} transaction
+                      {sub.transactionCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-zinc-950">
+                      {formatAmount(sub.amountUsd, currency)}
+                    </p>
+                    <p className="text-xs text-zinc-500">{sub.sharePercent}%</p>
+                  </div>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className={cn("h-full rounded-full", sub.barClassName)}
+                    style={{ width: `${sub.sharePercent}%` }}
+                  />
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ReportCard>
+  );
+}

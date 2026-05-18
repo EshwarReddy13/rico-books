@@ -78,5 +78,9 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
 
 ## Phase status
 
-- **Phase 0 (in progress):** skeleton — Next.js, Prisma, Neon Auth
-- **Phase 1+:** see `.cursor/.cursorrules` and `docs/architecture.md`
+- **Phase 0 (mostly done):** Next.js app, Prisma schema + migrations, Neon Auth,
+  dashboard shell (side nav, entity selector placeholder, page headers), skeleton
+  pages for Dashboard / Transactions / Reports / Categories / Assets / Liabilities /
+  Settings. See **`docs/architecture.md` §5.1** for what is wired vs placeholder.
+- **Phase 1 (next):** reference data — category tree CRUD, entities (DB + add flow),
+  assets/liabilities registers. See `.cursor/.cursorrules`.

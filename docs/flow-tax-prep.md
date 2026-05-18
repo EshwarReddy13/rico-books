@@ -48,7 +48,8 @@ The user opens the **ITR-prep** view on the Reports page for a financial year.
 §3.8) for the selected financial year: the ITR form, whether presumptive
 taxation is elected and at what rate, and which schedules apply.
 
-These are settings the user entered, not things the app computes.
+These are entered on **Reports** (ITR prep for the selected year), not in
+Settings — they are books configuration, not profile preferences.
 
 ### Step 2 — Compute the actual-basis taxable income
 

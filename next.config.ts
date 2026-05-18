@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
         destination: "/sign-up",
         permanent: true,
       },
+      {
+        source: "/import",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/review",
+        destination: "/transactions",
+        permanent: true,
+      },
     ];
   },
 };

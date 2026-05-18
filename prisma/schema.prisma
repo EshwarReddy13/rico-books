@@ -1,5 +1,6 @@
-// App data model — see docs/architecture.md §3.
-// Auth users/sessions live in Neon Auth (neon_auth schema), not here.
+// Rico Books business schema — docs/architecture.md §3.
+// Auth (users, sessions) lives in Neon Auth (`neon_auth` schema), not here.
+// Single-user v1: no user_id on business tables.
 
 generator client {
   provider = "prisma-client"
@@ -8,4 +9,287 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum MainCategoryKind {
+  pnl
+  balance_sheet
+}
+
+enum PnlSign {
+  income
+  expense
+}
+
+enum AccountKind {
+  asset
+  liability
+}
+
+enum AssetType {
+  bank
+  vehicle
+  computer
+  furniture
+  equipment
+  investment
+  other
+}
+
+enum TransactionDirection {
+  debit
+  credit
+}
+
+enum TransactionStatus {
+  pending_review
+  confirmed
+}
+
+enum LinkedRecordType {
+  asset
+  liability
+}
+
+enum ImportBatchStatus {
+  processing
+  completed
+  failed
+}
+
+// --- Reference data ---
+
+model Entity {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  transactionLines TransactionLine[]
+  learnedRules     LearnedCategorizationRule[]
+
+  @@map("entities")
+}
+
+model MainCategory {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String           @default("")
+  kind        MainCategoryKind
+  pnlSign     PnlSign?         @map("pnl_sign")
+
+  subCategories SubCategory[]
+
+  @@map("main_categories")
+}
+
+model SubCategory {
+  id               String            @id @default(cuid())
+  mainCategoryId   String            @map("main_category_id")
+  name             String
+  description      String            @default("")
+  linkedRecordId   String?           @map("linked_record_id")
+  linkedRecordType LinkedRecordType? @map("linked_record_type")
+
+  mainCategory     MainCategory      @relation(fields: [mainCategoryId], references: [id], onDelete: Restrict)
+  transactionLines TransactionLine[]
+  learnedRules     LearnedCategorizationRule[]
+
+  @@unique([mainCategoryId, name])
+  @@map("sub_categories")
+}
+
+/// Asset or liability register entry (bank account, vehicle, loan liability, etc.)
+model Account {
+  id               String      @id @default(cuid())
+  name             String
+  accountKind      AccountKind @map("account_kind")
+  assetType        AssetType?  @map("asset_type")
+  openingValuePaise BigInt     @default(0) @map("opening_value_paise")
+  openingDate      DateTime?   @map("opening_date") @db.Date
+  businessUsePct   Decimal?    @map("business_use_pct") @db.Decimal(5, 2)
+  depreciationRate Decimal?    @map("depreciation_rate") @db.Decimal(5, 2)
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  bankProfile        BankAccountProfile?
+  sourceTransactions Transaction[]       @relation("SourceAccount")
+  importBatches      ImportBatch[]
+  loan               Loan?
+
+  @@map("accounts")
+}
+
+/// Parser column mapping for a bank account (Settings — flow-transaction-import.md)
+model BankAccountProfile {
+  id             String @id @default(cuid())
+  accountId      String @unique @map("account_id")
+  bankName       String @default("") @map("bank_name")
+  /// Column header names, e.g. { "date": "Date", "narration": "Narration", ... }
+  columnMapping  Json   @map("column_mapping")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("bank_account_profiles")
+}
+
+model ImportBatch {
+  id               String            @id @default(cuid())
+  sourceAccountId  String            @map("source_account_id")
+  fileName         String?           @map("file_name")
+  status           ImportBatchStatus @default(completed)
+  importedAt       DateTime          @default(now()) @map("imported_at")
+  rowCount         Int               @default(0) @map("row_count")
+  duplicateCount   Int               @default(0) @map("duplicate_count")
+
+  sourceAccount Account       @relation(fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  transactions  Transaction[]
+
+  @@map("import_batches")
+}
+
+// --- Transactions ---
+
+model Transaction {
+  id                 String              @id @default(cuid())
+  date               DateTime            @db.Date
+  valueDate          DateTime?           @map("value_date") @db.Date
+  amountPaise        BigInt              @map("amount_paise")
+  direction          TransactionDirection
+  rawDescription     String              @map("raw_description")
+  referenceNo        String              @default("") @map("reference_no")
+  closingBalancePaise BigInt?            @map("closing_balance_paise")
+  sourceAccountId    String              @map("source_account_id")
+  fingerprint        String
+  importBatchId      String              @map("import_batch_id")
+  status             TransactionStatus   @default(pending_review)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  sourceAccount      Account             @relation("SourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  importBatch        ImportBatch         @relation(fields: [importBatchId], references: [id], onDelete: Restrict)
+  lines              TransactionLine[]
+  matchedScheduleRow LoanScheduleRow?    @relation("MatchedTransaction")
+
+  @@unique([sourceAccountId, fingerprint])
+  @@index([status, date])
+  @@index([importBatchId])
+  @@map("transactions")
+}
+
+model TransactionLine {
+  id            String   @id @default(cuid())
+  transactionId String   @map("transaction_id")
+  amountPaise   BigInt   @map("amount_paise")
+  subCategoryId String?  @map("sub_category_id")
+  entityId      String?  @map("entity_id")
+  description   String   @default("")
+  confidence    Decimal? @db.Decimal(4, 3)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  subCategory SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  entity      Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([subCategoryId])
+  @@index([entityId])
+  @@map("transaction_lines")
+}
+
+// --- Loans ---
+
+model Loan {
+  id                    String    @id @default(cuid())
+  liabilityAccountId    String    @unique @map("liability_account_id")
+  agreementNo           String    @default("") @map("agreement_no")
+  lender                String    @default("")
+  loanType              String    @default("") @map("loan_type")
+  amountFinancedPaise   BigInt    @map("amount_financed_paise")
+  tenure                Int
+  frequency             String    @default("monthly")
+  totalPayablePaise     BigInt    @map("total_payable_paise")
+  totalInterestPaise    BigInt    @map("total_interest_paise")
+  scheduleGeneratedDate DateTime? @map("schedule_generated_date") @db.Date
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  liabilityAccount Account           @relation(fields: [liabilityAccountId], references: [id], onDelete: Restrict)
+  scheduleRows     LoanScheduleRow[]
+
+  @@map("loans")
+}
+
+model LoanScheduleRow {
+  id                String    @id @default(cuid())
+  loanId            String    @map("loan_id")
+  installmentNo     Int       @map("installment_no")
+  dueDate           DateTime  @map("due_date") @db.Date
+  emiAmountPaise    BigInt    @map("emi_amount_paise")
+  principalAmountPaise BigInt @map("principal_amount_paise")
+  interestAmountPaise  BigInt @map("interest_amount_paise")
+  closingBalancePaise  BigInt @map("closing_balance_paise")
+  matchedTxnId      String?   @unique @map("matched_txn_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  loan              Loan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  matchedTransaction Transaction? @relation("MatchedTransaction", fields: [matchedTxnId], references: [id], onDelete: SetNull)
+
+  @@unique([loanId, installmentNo])
+  @@index([loanId, dueDate])
+  @@map("loan_schedule_rows")
+}
+
+// --- Tax & audit ---
+
+model TaxProfile {
+  id                 String   @id @default(cuid())
+  financialYear      String   @unique @map("financial_year")
+  itrForm            String   @default("ITR-3") @map("itr_form")
+  presumptiveEnabled Boolean  @default(false) @map("presumptive_enabled")
+  presumptiveRate    Decimal? @map("presumptive_rate") @db.Decimal(5, 2)
+  /// ITR schedule flags, e.g. ["FSI", "FA", "AL"]
+  schedulesEnabled   Json     @default("[]") @map("schedules_enabled")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("tax_profiles")
+}
+
+model AuditLog {
+  id                 String   @id @default(cuid())
+  entityTable        String   @map("entity_table")
+  entityId           String   @map("entity_id")
+  field              String
+  oldValue           String   @default("") @map("old_value")
+  newValue           String   @default("") @map("new_value")
+  changedAt          DateTime @default(now()) @map("changed_at")
+  /// Neon Auth user id (string), no FK — single-user audit trail
+  changedByAuthUserId String? @map("changed_by_auth_user_id")
+
+  @@index([entityTable, entityId])
+  @@index([changedAt])
+  @@map("audit_logs")
+}
+
+/// Merchant / narration pattern → category (flow-transaction-import.md learning loop)
+model LearnedCategorizationRule {
+  id            String   @id @default(cuid())
+  matchPattern  String   @map("match_pattern")
+  subCategoryId String   @map("sub_category_id")
+  entityId      String?  @map("entity_id")
+  notes         String   @default("")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  subCategory SubCategory @relation(fields: [subCategoryId], references: [id], onDelete: Cascade)
+  entity      Entity?     @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  @@index([matchPattern])
+  @@map("learned_categorization_rules")
 }

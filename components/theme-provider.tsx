@@ -10,8 +10,9 @@ export function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      defaultTheme="light"
+      storageKey="rico-books-theme"
+      enableSystem={false}
       disableTransitionOnChange
     >
       {children}
