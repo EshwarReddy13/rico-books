@@ -2,6 +2,8 @@ import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+import { MAIN_CATEGORY_SEED_COLORS } from "../lib/colors/palette";
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
@@ -54,11 +56,13 @@ async function main() {
         kind: cat.kind,
         pnlSign: cat.pnlSign,
         description: cat.description,
+        colorHex: MAIN_CATEGORY_SEED_COLORS[cat.name] ?? "#71717a",
       },
       update: {
         kind: cat.kind,
         pnlSign: cat.pnlSign,
         description: cat.description,
+        colorHex: MAIN_CATEGORY_SEED_COLORS[cat.name] ?? "#71717a",
       },
     });
   }

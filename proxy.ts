@@ -6,6 +6,8 @@ export default auth.middleware({
 
 export const config = {
   matcher: [
-    "/((?!login|sign-up|api/auth|_next/static|_next/image|favicon.ico).*)",
+    // api/entities* excluded — middleware redirect returns HTML and breaks fetch JSON;
+    // those routes call requireSession() and return 401 JSON instead.
+    "/((?!login|sign-up|api/auth|api/entities|_next/static|_next/image|favicon.ico).*)",
   ],
 };

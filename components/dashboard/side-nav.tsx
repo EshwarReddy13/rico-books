@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/auth/brand-mark";
 import { NavEntitySelector } from "@/components/dashboard/nav-entity-selector";
 import { NavThemeToggle } from "@/components/dashboard/nav-theme-toggle";
+import type { EntitySummary } from "@/lib/entities/types";
 import {
   dashboardBooksNavItems,
   dashboardMainNavItems,
@@ -26,7 +27,7 @@ function NavLink({
   label,
   icon: Icon,
   variant = "main",
-}: DashboardNavItem & { variant?: "main" | "books" | "settings" }) {
+}: DashboardNavItem & { variant?: "main" | "settings" }) {
   const pathname = usePathname();
   const active = isNavActive(pathname, href);
 
@@ -36,12 +37,9 @@ function NavLink({
       className={cn(
         "flex items-center justify-center gap-3 rounded-xl px-2 py-2.5 transition-colors",
         "sm:justify-start sm:px-3",
-        variant === "books" && !active && "text-zinc-500",
         active
           ? "bg-zinc-950 text-white dark:bg-zinc-100 dark:text-zinc-950"
-          : variant === "books"
-            ? "hover:bg-zinc-50 hover:text-zinc-900 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-50"
-            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+          : "text-zinc-950 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
       )}
       aria-current={active ? "page" : undefined}
       title={label}
@@ -51,9 +49,7 @@ function NavLink({
           "size-5 shrink-0",
           active
             ? "text-white dark:text-zinc-950"
-            : variant === "books"
-              ? "text-zinc-400"
-              : "text-zinc-500 dark:text-zinc-500",
+            : "text-zinc-600 dark:text-zinc-400",
         )}
         aria-hidden
       />
@@ -61,7 +57,6 @@ function NavLink({
         className={cn(
           "hidden truncate text-sm font-medium sm:inline",
           active ? "text-white dark:text-zinc-950" : "text-inherit",
-          variant === "books" && !active && "font-normal",
         )}
       >
         {label}
@@ -70,7 +65,7 @@ function NavLink({
   );
 }
 
-export function SideNav() {
+export function SideNav({ entities }: { entities: EntitySummary[] }) {
   return (
     <aside className="flex h-full w-[5rem] shrink-0 flex-col sm:w-56">
       <nav
@@ -93,7 +88,7 @@ export function SideNav() {
         </Link>
 
         <div className="mb-2 border-b border-neutral-100 pb-3 dark:border-zinc-800">
-          <NavEntitySelector />
+          <NavEntitySelector entities={entities} />
         </div>
 
         <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
@@ -116,7 +111,7 @@ export function SideNav() {
 
           {dashboardBooksNavItems.map((item) => (
             <li key={item.href}>
-              <NavLink {...item} variant="books" />
+              <NavLink {...item} variant="main" />
             </li>
           ))}
         </ul>

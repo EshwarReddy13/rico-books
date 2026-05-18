@@ -2,6 +2,7 @@ export type MainCategorySummary = {
   id: string;
   name: string;
   description: string;
+  colorHex: string;
   kind: "pnl" | "balance_sheet";
   pnlSign: "income" | "expense" | null;
   subCategoryCount: number;

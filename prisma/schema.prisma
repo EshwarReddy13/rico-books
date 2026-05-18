@@ -65,6 +65,8 @@ model Entity {
   id          String   @id @default(cuid())
   name        String
   description String   @default("")
+  /// UI accent — #RRGGBB (preset swatch or custom picker)
+  colorHex    String   @default("#6366f1") @map("color_hex") @db.VarChar(7)
   createdAt   DateTime @default(now()) @map("created_at")
 
   transactionLines TransactionLine[]
@@ -77,6 +79,8 @@ model MainCategory {
   id          String           @id @default(cuid())
   name        String           @unique
   description String           @default("")
+  /// UI accent — #RRGGBB (preset swatch or custom picker)
+  colorHex    String           @default("#71717a") @map("color_hex") @db.VarChar(7)
   kind        MainCategoryKind
   pnlSign     PnlSign?         @map("pnl_sign")
 
@@ -90,6 +94,8 @@ model SubCategory {
   mainCategoryId   String            @map("main_category_id")
   name             String
   description      String            @default("")
+  /// UI accent — #RRGGBB (often related to parent main category)
+  colorHex         String            @default("#94a3b8") @map("color_hex") @db.VarChar(7)
   linkedRecordId   String?           @map("linked_record_id")
   linkedRecordType LinkedRecordType? @map("linked_record_type")
 
