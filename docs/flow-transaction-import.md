@@ -1,19 +1,25 @@
 # Flow: Transaction Import & Categorization
 
-> Last reviewed against code: not yet built — design blueprint.
+> **Last reviewed against code:** 2026-05-17 — design blueprint. The
+> **Transactions** page skeleton exists (filters including **Pending review**,
+> mock table); import, AI, fingerprint, and confirmation are not built yet.
+> Review queue UX is on `/transactions` (`/review` redirects there).
 > Read `architecture.md` first. This flow assumes you understand the data
 > model (especially Transaction vs Transaction Line) and the governing
 > principle: **AI proposes, code computes, human confirms.**
 
 This is the most-used flow in the app. It is how money gets *in* and gets
-*categorized*. It spans four pages: Import, Review, Transactions, and it
-writes data the Dashboard and Reports read.
+*categorized*. It spans the **Dashboard** (upload entry point), the
+**Transactions** page (review queue + ledger), and writes data that **Reports**
+read.
 
 ---
 
 ## Trigger
 
-The user uploads a bank statement file on the **Import** page.
+The user taps **Import** in the **Dashboard → Actions** row. A dialog opens
+for bank account selection and file upload. There is no separate Import page;
+`/import` redirects to the dashboard.
 
 **v1 supports CSV / Excel only.** These are structured and reliable. PDF
 statement import is deferred to a later version (PDF is harder to parse
@@ -37,8 +43,8 @@ data model as follows:
 
 A row has a value in *either* Withdrawal *or* Deposit — that column tells the
 parser both the amount and the direction. Other banks lay columns out
-differently; the parser uses the **bank account profile** (Settings) to know
-which column is which.
+differently; the parser uses the **bank account profile** on the **Assets**
+page to know which column is which.
 
 ---
 
@@ -148,14 +154,14 @@ for the full reasoning. Matching a ₹50,000 debit to "the March schedule row"
 is a lookup, not a judgement.
 
 **Why it is a step in the import flow:** so that when an EMI reaches the
-Review queue it arrives *already split*, and the user just confirms the split
-rather than categorizing from scratch.
+Transactions review queue it arrives *already split*, and the user just
+confirms the split rather than categorizing from scratch.
 
-### Step 6 — The Review queue (human confirmation)
+### Step 6 — Review on Transactions (human confirmation)
 
 **What happens:** every pending transaction is presented to the user on the
-**Review** page with its AI-proposed (or rule-matched, or EMI-pre-split)
-categorization. The user confirms or overrides.
+**Transactions** page (filter: **Pending review**) with its AI-proposed (or
+rule-matched, or EMI-pre-split) categorization. The user confirms or overrides.
 
 This is the **"human confirms"** part of the principle. **A transaction is not
 real for P&L purposes until it is confirmed here.**
@@ -173,8 +179,10 @@ real for P&L purposes until it is confirmed here.**
 
 **Learning loop:** when the user *overrides* a suggestion, the app records the
 rule ("this merchant → this category/entity"). Next month that merchant is
-matched at Tier 1 and never reaches the AI. The Review queue shrinks over time
-as the app learns. The learned rules are viewable and editable in Settings.
+matched at Tier 1 and never reaches the AI. The pending-review queue shrinks
+over time as the app learns. A UI to view and edit learned rules is **deferred**
+(not on the Categories page in the current skeleton); the data model still
+expects rules to exist once Tier 1 is implemented.
 
 ### Step 7 — Write confirmed transactions; they become "real"
 
@@ -189,17 +197,23 @@ Every confirmation and every later edit is recorded in the **Audit Log**.
 
 ## After the flow
 
-Confirmed transactions appear in the **Transactions** ledger — the full
-searchable list, where any transaction can be edited later (edits go through
-the Audit Log). The **Dashboard** "N awaiting confirmation" count drops to
-zero. The P&L and balance sheet now reflect the new data.
+Confirmed transactions remain on **Transactions** (filter: **Confirmed** or
+**All**) — the full searchable ledger, where any transaction can be edited
+later (edits go through the Audit Log). The **Dashboard** "N awaiting
+confirmation" count drops toward zero. The P&L and balance sheet now reflect
+the new data. The user opens **Transactions** and filters to **Pending review**
+to confirm imported items.
 
 ---
 
 ## What this flow assumes
 
-- Bank account profiles are configured in Settings (so the parser knows the
+- Bank account profiles are configured on **Assets** (so the parser knows the
   column layout).
+- **Entities** exist in the database and the user has selected one via the
+  **side-nav entity selector** (see `architecture.md` §5.1).
+- The **category tree** is maintained on **Categories** (main + sub-categories
+  only in the current UI).
 - Opening balances have been set (see `architecture.md` §4.1).
 - Loan schedules already exist for any active loans (so Step 5 can match) —
   see `flow-emi-split.md`.

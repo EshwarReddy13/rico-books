@@ -1,6 +1,8 @@
 # Architecture
 
-> Last reviewed against code: not yet built — this is the design blueprint.
+> **Last reviewed against code:** 2026-05-17 — data model and flows below are the
+> design blueprint; **§5.1** describes the UI shell that exists today (Phase 0
+> skeleton). Business logic (import, AI, real aggregates) is not wired yet.
 
 This document is the entry point. Read it before any flow doc. It explains
 **what the app is**, the **core data model**, the **one governing principle**,
@@ -74,7 +76,8 @@ any code, because it is the rule a new contributor is most tempted to break.
 
 - **The human confirms.** Nothing the AI proposes counts until the user has
   explicitly confirmed it. An imported transaction is not part of the P&L
-  until the user has approved its category in the Review queue. This is what
+  until the user has approved its category on the Transactions page (pending
+  review queue). This is what
   makes the numbers trustworthy at filing time.
 
 When in doubt about whether to use the AI for something, ask: *"Is this
@@ -249,7 +252,7 @@ the unit of categorization.**
 | sub_category_id  | foreign key → sub-category                                  |
 | entity_id        | foreign key → entity                                        |
 | description      | the AI-generated, human-confirmed, freely-editable text     |
-| confidence       | 0–1, the AI's confidence (used to drive Review queue UX)    |
+| confidence       | 0–1, the AI's confidence (used to drive review UX on Transactions) |
 
 A normal ₹14,000 software payment = one transaction, one line.
 A ₹50,000 car EMI = one transaction, **two lines**: a ₹10,000 line under
@@ -399,16 +402,90 @@ Do not treat dates as one flat undifferentiated timeline.
 Each page is a view onto the objects in section 3. Listed with the flow doc
 that governs its behavior.
 
-| Page                  | Purpose                                                        | Governing flow doc            |
-|-----------------------|----------------------------------------------------------------|-------------------------------|
-| Dashboard             | P&L summary, net worth, "N transactions awaiting confirmation" | (reads from all)              |
-| Import                | Upload a statement, parse, de-duplicate, stage for review      | `flow-transaction-import.md`  |
-| Review / Categorize   | The AI-suggests / human-confirms queue. The heart of the app.  | `flow-transaction-import.md`  |
-| Transactions (ledger) | Full searchable list of confirmed transactions; edit anything  | `flow-transaction-import.md`  |
-| Categories            | Manage the main + sub-category tree                            | `architecture.md` §3.2        |
-| Assets & Liabilities  | The account register; loans, the car, depreciation             | `flow-emi-split.md`, `flow-balance-sheet.md` |
-| Reports               | P&L statement, net worth, ITR-prep view, export                | `flow-pnl-calculation.md`, `flow-tax-prep.md` |
-| Settings              | Entities, bank account profiles, tax profile, learned rules    | `flow-tax-prep.md`            |
+### 5.1 UI shell (as built — Phase 0 skeleton)
+
+Authenticated app routes live under `app/(dashboard)/`. Every dashboard page
+shares the same chrome:
+
+| Piece | Role | Code |
+|-------|------|------|
+| **Side nav** | Fixed-height left rail; does not scroll with page content | `components/dashboard/side-nav.tsx` |
+| **Dashboard shell** | Scrollable `main`, page header, currency context | `components/dashboard/dashboard-shell.tsx`, `dashboard-header.tsx` |
+| **Page titles** | Title + subtitle from pathname | `lib/dashboard/page-headers.ts` |
+
+**Layout rules (enforced in code):** outer shell `h-dvh overflow-hidden`; only
+`main` scrolls (`overflow-y-auto`). No page-level horizontal scroll — wide
+tables use a local `overflow-x-auto` container.
+
+**Redirects:** `/review` → `/transactions` (review queue lives on
+Transactions, not a separate route). `/import` → `/` (import entry on
+Dashboard when built).
+
+#### Navigation (as built)
+
+Top to bottom in the side nav:
+
+1. **Rico Books** — brand link to `/` (Dashboard home).
+2. **Entity selector** — dropdown above the workflow links
+   (`components/dashboard/nav-entity-selector.tsx`). Filters which entity's
+   data the app shows once wired to the database. Today uses placeholder
+   entities; the last menu item is **Add new entity** (flow not built yet).
+3. **Workflow:** Dashboard (`/`), Transactions (`/transactions`), Reports
+   (`/reports`).
+4. **Divider + “Books” label:** Categories (`/categories`), Assets (`/assets`),
+   Liabilities (`/liabilities`).
+5. **Bottom:** Settings (`/settings`), dark mode toggle.
+
+Nav item definitions: `lib/dashboard/nav-items.ts`.
+
+**Deferred in UI (still in the data model / flows):** a separate Entities page
+or tab, and a learned-rules editor on Categories. Entity switching is only in
+the side-nav selector for now.
+
+#### Page skeletons (as built)
+
+| Route | What exists today |
+|-------|-------------------|
+| `/` | Dashboard home layout (placeholder metrics / actions) |
+| `/transactions` | Filters **All** / **Pending review** / **Confirmed**; import button; table with mock rows |
+| `/reports` | Report grid layout (placeholder charts and figures) |
+| `/categories` | Main-category cards (DB-backed with seed fallback), period strip, sub-category breakdown, mix chart, recent list — **amounts and recent txns use placeholder data** until computation is wired |
+| `/assets`, `/liabilities` | Card grid per account + **Add new** card (DB or placeholders); detail view deferred |
+| `/settings` | Profile (read-only), display (currency + theme), sign out |
+
+**Categories page layout (as built):** horizontal main-category cards (select
+one) → summary strip for the period → 60/40 grid: sub-category breakdown (left),
+category mix + recent transactions (right). No tab bar; no Entities or Rules
+panels on this page.
+
+### 5.2 Navigation (target design)
+
+Same grouping as §5.1 — the structure is intentional and not expected to
+change when features are wired:
+
+- **Workflow** (top): Dashboard, Transactions, Reports — day-to-day use.
+- **Entity context** (above workflow): which business/tag filters the session.
+- **Books** (below a divider): Categories, Assets, Liabilities — chart of
+  accounts and registers; configured occasionally.
+- **Settings** (bottom, above the theme toggle): profile and general app
+  preferences only. Nothing that defines the books lives here.
+
+### 5.3 Page map (target behavior)
+
+| Page          | Purpose                                                                 | Governing flow doc            |
+|---------------|-------------------------------------------------------------------------|-------------------------------|
+| Dashboard     | P&L summary, net worth, statement import (Actions), "N awaiting confirmation" | (reads from all), `flow-transaction-import.md` |
+| Transactions  | Review queue (`pending_review`) + confirmed ledger; categorize, confirm, edit | `flow-transaction-import.md`  |
+| Reports       | P&L statement, net worth, ITR-prep view, tax profile for the year, export | `flow-pnl-calculation.md`, `flow-tax-prep.md` |
+| Categories    | Main + sub-category tree only (CRUD, descriptions for AI context)      | `architecture.md` §3.2         |
+| Assets        | Asset accounts (bank, vehicle, …), bank import profiles, opening balances | `flow-balance-sheet.md`       |
+| Liabilities   | Liability accounts, loans, amortization schedules, EMI setup             | `flow-emi-split.md`, `flow-balance-sheet.md` |
+| Settings      | User profile, preferences, auth-related options (not ledger data)         | —                             |
+
+**Entity** records (§3.1) are created/edited via the side-nav entity selector
+(and a future add-entity flow), not a dedicated page. **Learned categorization
+rules** (Tier 1 in `flow-transaction-import.md`) will get a management UI later;
+they are not on Categories in the current skeleton.
 
 ---
 

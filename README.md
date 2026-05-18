@@ -54,8 +54,8 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
 
 5. Create your account (first time only):
 
-   - Open [http://localhost:3000/auth/sign-up](http://localhost:3000/auth/sign-up)
-   - Or sign in at `/auth/sign-in` if the account already exists
+   - Open [http://localhost:3000/sign-up](http://localhost:3000/sign-up)
+   - Or sign in at `/login` if the account already exists
 
 6. Start the dev server:
 
@@ -63,7 +63,7 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
    npm run dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000) — unauthenticated visits redirect to `/auth/sign-in`.
+   Open [http://localhost:3000](http://localhost:3000) — unauthenticated visits redirect to `/login`.
 
    **Safari:** if cookies fail on HTTP, use `npm run dev -- --experimental-https` and open `https://localhost:3000`.
 
@@ -78,5 +78,9 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
 
 ## Phase status
 
-- **Phase 0 (in progress):** skeleton — Next.js, Prisma, Neon Auth
-- **Phase 1+:** see `.cursor/.cursorrules` and `docs/architecture.md`
+- **Phase 0 (mostly done):** Next.js app, Prisma schema + migrations, Neon Auth,
+  dashboard shell (side nav, entity selector placeholder, page headers), skeleton
+  pages for Dashboard / Transactions / Reports / Categories / Assets / Liabilities /
+  Settings. See **`docs/architecture.md` §5.1** for what is wired vs placeholder.
+- **Phase 1 (next):** reference data — category tree CRUD, entities (DB + add flow),
+  assets/liabilities registers. See `.cursor/.cursorrules`.

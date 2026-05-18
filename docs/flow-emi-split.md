@@ -37,8 +37,8 @@ Job 2. **Do not.** Reasoning below.
 
 ### Trigger
 
-The user sets up a loan on the **Assets & Liabilities** page and uploads the
-loan's amortization schedule document (a PDF or Excel from the bank).
+The user sets up a loan on the **Liabilities** page and uploads the loan's
+amortization schedule document (a PDF or Excel from the bank).
 
 ### Steps
 
@@ -107,8 +107,9 @@ When transactions are imported, code checks each one against the **open**
   - The two lines sum to the transaction amount, so the transaction
     reconciles against the bank statement.
 - The schedule row's `matched_txn_id` is set, so it is not matched again.
-- The pre-split transaction goes into the Review queue **already split** — the
-  user confirms the split rather than categorizing from scratch.
+- The pre-split transaction appears on **Transactions** (pending review)
+  **already split** — the user confirms the split rather than categorizing from
+  scratch.
 
 **Match against each row's own `emi_amount` — never a single assumed figure.**
 Real schedules are irregular: the first instalment and the last instalment

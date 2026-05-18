@@ -17,8 +17,8 @@ reason this flow doc exists.
 
 ## Trigger
 
-The user opens the **Assets & Liabilities** page or the net-worth section of
-Reports / Dashboard, for a chosen date or financial year.
+The user opens **Assets** or **Liabilities** (or the net-worth section of
+Reports / Dashboard), for a chosen date or financial year.
 
 ---
 
@@ -80,7 +80,7 @@ worth, *and* it is handed to `flow-pnl-calculation.md` Step 4 as a P&L expense,
   other liabilities.
 - **Net worth = total assets − total liabilities.**
 
-This is displayed on the Assets & Liabilities page and summarized on the
+This is displayed on **Assets** and **Liabilities** and summarized on the
 Dashboard.
 
 ---

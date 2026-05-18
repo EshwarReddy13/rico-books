@@ -6,8 +6,9 @@ should be able to read it and understand how the whole system works.
 
 ## Read in this order
 
-1. **`architecture.md`** — start here. What the app is, the core data model
-   (8 objects), the one governing principle, the pages, and the tech stack.
+1. **`architecture.md`** — start here. What the app is, the core data model,
+   the one governing principle, the pages (including **§5.1** — current UI
+   shell), and the tech stack.
 2. **`flow-transaction-import.md`** — how money gets in and gets categorized.
    The most-used flow.
 3. **`flow-emi-split.md`** — loans, the amortization schedule, the EMI

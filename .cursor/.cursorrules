@@ -68,12 +68,14 @@ out the dependency and confirm before proceeding.
 
 - **Phase 0 — Skeleton.** Next.js project, PostgreSQL connected, the schema
   from `architecture.md` §3 as real migrations, login/auth.
-- **Phase 1 — Reference data (Settings).** Entities, categories (with seeded
-  defaults), bank-account profiles.
+- **Phase 1 — Reference data (Books nav).** Categories (main + sub tree on
+  `/categories`), entities (side-nav selector + add flow; no Entities tab),
+  Assets (accounts, bank profiles), Liabilities (loans). Learned rules UI is
+  deferred until import/categorize (Phase 2–3).
 - **Phase 2 — Import.** CSV/Excel parsing, the fingerprint/dedup, transactions
   landing as `pending_review`.
-- **Phase 3 — Categorize.** The AI categorization pass and the Review queue
-  confirmation UI.
+- **Phase 3 — Categorize.** The AI categorization pass and the Transactions
+  page review/confirmation UI (`pending_review` filter).
 - **Phase 4 — Computation.** The P&L and balance-sheet engines (pure
   functions); opening-balances setup. Test this phase hardest.
 - **Phase 5 — Loans.** Loan setup, schedule extraction + checksum
@@ -131,6 +133,14 @@ agreement.
   totals) before trusting the data.
 - Keep formatting and naming clean and consistent — but the rules above
   matter more than style.
+- **No page-level horizontal scroll.** Dashboard pages must not overflow the
+  viewport width. Use `min-w-0` / `max-w-full` on flex and grid children;
+  clip page overflow on the dashboard shell; put wide tables in a local
+  `overflow-x-auto` container only. Never use negative horizontal margins that
+  widen the page.
+- **Dashboard layout:** outer shell is `h-dvh overflow-hidden`; side nav stays
+  fixed height; only the main content column scrolls (`overflow-y-auto` on
+  `main`), never the whole page including the nav.
 
 ---
 
