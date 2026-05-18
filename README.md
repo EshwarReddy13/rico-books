@@ -54,8 +54,8 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
 
 5. Create your account (first time only):
 
-   - Open [http://localhost:3000/auth/sign-up](http://localhost:3000/auth/sign-up)
-   - Or sign in at `/auth/sign-in` if the account already exists
+   - Open [http://localhost:3000/sign-up](http://localhost:3000/sign-up)
+   - Or sign in at `/login` if the account already exists
 
 6. Start the dev server:
 
@@ -63,7 +63,7 @@ Blueprint reading guide: [`docs/README-blueprint.md`](./docs/README-blueprint.md
    npm run dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000) — unauthenticated visits redirect to `/auth/sign-in`.
+   Open [http://localhost:3000](http://localhost:3000) — unauthenticated visits redirect to `/login`.
 
    **Safari:** if cookies fail on HTTP, use `npm run dev -- --experimental-https` and open `https://localhost:3000`.
 
