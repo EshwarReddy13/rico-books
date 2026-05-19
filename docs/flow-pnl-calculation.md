@@ -1,6 +1,9 @@
 # Flow: Profit & Loss Calculation
 
-> Last reviewed against code: not yet built — design blueprint.
+> **Last reviewed against code:** 2026-05-19 — design blueprint. P&L computation
+> not implemented; import and categories partially built — see
+> `implementation-status.md`. Main category for a line is resolved via sub → main
+> or `main_category_id` when main-only — see Step 2 below.
 > Read `architecture.md` first.
 
 The P&L statement is one of the app's two primary outputs. This flow describes
@@ -33,8 +36,10 @@ line is excluded (see Step 2).
 
 ### Step 2 — Keep only P&L lines
 
-**What happens:** for each line, the engine looks at its sub-category → main
-category → `kind`. Only lines whose main category has `kind = pnl` are kept.
+**What happens:** for each line, the engine resolves the main category (from
+`sub_category → main` when a sub is set, or from `main_category_id` when the
+line is main-only) and reads `kind`. Only lines whose main category has
+`kind = pnl` are kept.
 
 This is where the `kind` field from the data model does its job. Lines under
 `Income` and `Expense` (both `kind = pnl`) are kept. Lines under `Owner

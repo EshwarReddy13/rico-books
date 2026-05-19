@@ -66,12 +66,18 @@ export async function deleteMainCategoryRecord(
   id: string,
 ): Promise<CategoryMutationResult> {
   try {
-    const count = await prisma.subCategory.count({
-      where: { mainCategoryId: id },
-    });
-    if (count > 0) {
+    const [subCount, lineCount] = await Promise.all([
+      prisma.subCategory.count({ where: { mainCategoryId: id } }),
+      prisma.transactionLine.count({ where: { mainCategoryId: id } }),
+    ]);
+    if (subCount > 0) {
       return {
-        error: `This category has ${count} sub-categor${count === 1 ? "y" : "ies"}. Delete them first.`,
+        error: `This category has ${subCount} sub-categor${subCount === 1 ? "y" : "ies"}. Delete them first.`,
+      };
+    }
+    if (lineCount > 0) {
+      return {
+        error: `This category is used on ${lineCount} transaction line${lineCount === 1 ? "" : "s"}. Re-categorize them first.`,
       };
     }
     await prisma.mainCategory.delete({ where: { id } });
@@ -134,6 +140,14 @@ export async function deleteSubCategoryRecord(
   id: string,
 ): Promise<CategoryMutationResult> {
   try {
+    const lineCount = await prisma.transactionLine.count({
+      where: { subCategoryId: id },
+    });
+    if (lineCount > 0) {
+      return {
+        error: `This sub-category is used on ${lineCount} transaction line${lineCount === 1 ? "" : "s"}. Re-categorize them first.`,
+      };
+    }
     await prisma.subCategory.delete({ where: { id } });
     return { success: true };
   } catch (error) {

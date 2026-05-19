@@ -1,6 +1,7 @@
 # Flow: Balance Sheet, Depreciation & Net Worth
 
-> Last reviewed against code: not yet built — design blueprint.
+> **Last reviewed against code:** 2026-05-19 — design blueprint; not implemented.
+> Bank assets CRUD built; see `implementation-status.md`.
 > Read `architecture.md` first, especially §4 (opening balances and the
 > financial-year boundary) — this flow depends on both.
 

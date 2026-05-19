@@ -22,12 +22,14 @@ export function SubCategoryFormDialog({
   mainCategoryId,
   mainCategoryName,
   onClose,
+  onCreated,
 }: {
   mode: "create" | "edit";
   sub?: SubCategorySummary | null;
   mainCategoryId: string;
   mainCategoryName: string;
   onClose: () => void;
+  onCreated?: (id: string) => void;
 }) {
   const router = useRouter();
   const [colorHex, setColorHex] = useState(
@@ -76,6 +78,10 @@ export function SubCategoryFormDialog({
     if (result.error) {
       setError(result.error);
       return;
+    }
+
+    if (mode === "create" && result.id) {
+      onCreated?.(result.id);
     }
 
     router.refresh();

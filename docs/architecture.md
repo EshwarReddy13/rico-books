@@ -1,8 +1,10 @@
 # Architecture
 
-> **Last reviewed against code:** 2026-05-17 — data model and flows below are the
-> design blueprint; **§5.1** describes the UI shell that exists today (Phase 0
-> skeleton). Business logic (import, AI, real aggregates) is not wired yet.
+> **Last reviewed against code:** 2026-05-19 — data model and flows are the design
+> blueprint. For what is actually built today (import slice 1, categories CRUD,
+> bank accounts, Gemini ping, main-only line categories), see
+> **`implementation-status.md`** first. **§5.1** summarizes the UI; it is no
+> longer a “nothing wired” skeleton.
 
 This document is the entry point. Read it before any flow doc. It explains
 **what the app is**, the **core data model**, the **one governing principle**,
@@ -61,9 +63,11 @@ Do not let them silently creep into v1.
 This sentence governs every flow in the app. Internalize it before writing
 any code, because it is the rule a new contributor is most tempted to break.
 
-- **AI proposes.** The AI model (Claude Haiku 4.5) is used to *read* messy
-  inputs and *draft* suggestions: it reads raw bank statement text and proposes
-  a category, a sub-category, an entity, and a human-readable description. It
+- **AI proposes.** The AI model (**Google Gemini 3.1 Flash Lite**, default id
+  `gemini-3.1-flash-lite`) is used to *read* messy inputs and *draft*
+  suggestions: it reads raw bank statement text and proposes a category (main
+  and/or sub — sub is optional when the main alone is enough, e.g. Owner
+  Contribution), an entity, and a human-readable description. It
   reads a loan schedule document and extracts the table. These are all
   *proposals* — drafts placed in front of the human.
 
@@ -142,6 +146,13 @@ the category's intent — a small, accepted maintenance burden.
 A few main categories are **seeded automatically** when the app is first set
 up (Income, Expense, Owner Contribution, Assets, Loans, Transfer), so the
 category tree is never empty on day one.
+
+**Sub-categories are optional.** Some mains (especially **Owner Contribution**
+and **Transfer**) often have no subs. Categorization can assign **main only**
+on a transaction line (`main_category_id` set, `sub_category_id` null) or
+**sub only** (main implied via the sub's parent). The two are mutually
+exclusive on one line. See `lib/transactions/line-category.ts` and
+`implementation-status.md`.
 
 **Sub-category**
 
@@ -249,7 +260,8 @@ the unit of categorization.**
 | id               | primary key                                                 |
 | transaction_id   | foreign key → transaction                                   |
 | amount           | this line's portion; all lines of a txn must sum to txn.amount |
-| sub_category_id  | foreign key → sub-category                                  |
+| main_category_id | nullable — when set, line is categorized at main level only (e.g. Owner Contribution); mutually exclusive with sub_category_id |
+| sub_category_id  | nullable — when set, main is implied via the sub's parent; mutually exclusive with main_category_id |
 | entity_id        | foreign key → entity                                        |
 | description      | the AI-generated, human-confirmed, freely-editable text     |
 | confidence       | 0–1, the AI's confidence (used to drive review UX on Transactions) |
@@ -402,10 +414,12 @@ Do not treat dates as one flat undifferentiated timeline.
 Each page is a view onto the objects in section 3. Listed with the flow doc
 that governs its behavior.
 
-### 5.1 UI shell (as built — Phase 0 skeleton)
+### 5.1 UI shell (as built)
 
 Authenticated app routes live under `app/(dashboard)/`. Every dashboard page
 shares the same chrome:
+
+**Implementation checklist:** `implementation-status.md` (updated with each slice).
 
 | Piece | Role | Code |
 |-------|------|------|
@@ -418,8 +432,8 @@ shares the same chrome:
 tables use a local `overflow-x-auto` container.
 
 **Redirects:** `/review` → `/transactions` (review queue lives on
-Transactions, not a separate route). `/import` → `/` (import entry on
-Dashboard when built).
+Transactions, not a separate route). `/import` → `/` (import opens from
+Dashboard → Import).
 
 #### Navigation (as built)
 
@@ -427,9 +441,9 @@ Top to bottom in the side nav:
 
 1. **Rico Books** — brand link to `/` (Dashboard home).
 2. **Entity selector** — dropdown above the workflow links
-   (`components/dashboard/nav-entity-selector.tsx`). Filters which entity's
-   data the app shows once wired to the database. Today uses placeholder
-   entities; the last menu item is **Add new entity** (flow not built yet).
+   (`components/dashboard/nav-entity-selector.tsx`). Loads entities from the
+   database; add/edit via dialog. **Filtering** transactions by selected entity
+   is not wired yet.
 3. **Workflow:** Dashboard (`/`), Transactions (`/transactions`), Reports
    (`/reports`).
 4. **Divider + “Books” label:** Categories (`/categories`), Assets (`/assets`),
@@ -442,15 +456,16 @@ Nav item definitions: `lib/dashboard/nav-items.ts`.
 or tab, and a learned-rules editor on Categories. Entity switching is only in
 the side-nav selector for now.
 
-#### Page skeletons (as built)
+#### Pages (as built)
 
 | Route | What exists today |
 |-------|-------------------|
-| `/` | Dashboard home layout (placeholder metrics / actions) |
-| `/transactions` | Filters **All** / **Pending review** / **Confirmed**; import button; table with mock rows |
-| `/reports` | Report grid layout (placeholder charts and figures) |
-| `/categories` | Main-category cards (DB-backed with seed fallback), period strip, sub-category breakdown, mix chart, recent list — **amounts and recent txns use placeholder data** until computation is wired |
-| `/assets`, `/liabilities` | Card grid per account + **Add new** card (DB or placeholders); detail view deferred |
+| `/` | Dashboard home; **Import** opens upload wizard (`ImportWizard`); overview/analytics still placeholder |
+| `/transactions` | **DB-backed** table; filters All / Pending review / Confirmed; live summary cards (INR); category column uses main-only or `Main → Sub` labels |
+| `/reports` | Layout only — figures not computed from ledger |
+| `/categories` | **CRUD** main + sub categories (DB); mix chart and recent list still **placeholder amounts** |
+| `/assets` | **Bank accounts** CRUD (DB); other asset types not in UI yet |
+| `/liabilities` | Card grid; **placeholder** accounts until liabilities CRUD ships |
 | `/settings` | Profile (read-only), display (currency + theme), sign out |
 
 **Categories page layout (as built):** horizontal main-category cards (select
@@ -485,7 +500,7 @@ change when features are wired:
 **Entity** records (§3.1) are created/edited via the side-nav entity selector
 (and a future add-entity flow), not a dedicated page. **Learned categorization
 rules** (Tier 1 in `flow-transaction-import.md`) will get a management UI later;
-they are not on Categories in the current skeleton.
+they are not on Categories yet — see `implementation-status.md`.
 
 ---
 
@@ -508,12 +523,12 @@ codebase and a single deployment:
         ▼
   Next.js server (route handlers / server actions)  ──>  PostgreSQL
         │
-        └──>  Claude API (Haiku 4.5)
+        └──>  Google Gemini API (3.1 Flash Lite)
 ```
 
-The browser never talks to the database or the Claude API directly. All data
+The browser never talks to the database or the Gemini API directly. All data
 access, all AI calls, and all computation happen in **server-side code** —
-Next.js route handlers and server actions. This matters for security (see 6.6).
+Next.js route handlers and JSON API routes. This matters for security (see 6.6).
 
 Next.js was chosen over a Vite SPA + separate Node backend because one
 framework, one codebase, one deployment directly serves priority (2) — easy
@@ -521,9 +536,9 @@ for another coder — and priority (3) — cheap to run. It is also a stack the
 user already knows.
 
 **The discipline Next.js demands:** because it blurs the client/server line,
-there must be a hard rule — anything touching the database, the Claude API
+there must be a hard rule — anything touching the database, the Gemini API
 key, or a computation lives **only** in server-side code (route handlers,
-server actions, server components), **never** in a client component. With
+server modules, server components), **never** in a client component. With
 that rule enforced, Next.js is the right call. Without it, secrets leak into
 the browser bundle.
 
@@ -544,13 +559,13 @@ the browser bundle.
   Next.js app: route handlers and server actions, in TypeScript. Same language
   and same repo as the frontend keeps the shared types real and lowers the
   barrier for a second coder.
-- A typed query layer / ORM (e.g. Prisma or Drizzle). This is doing real work
-  for priority (1): the schema is defined once, migrations are generated, and
-  queries are type-checked. Drizzle is lighter and closer to SQL; Prisma is
-  more batteries-included. Either is defensible — pick one and document it.
+- **Prisma 7** with PostgreSQL. Schema in `prisma/schema.prisma`; client generated
+  to `app/generated/prisma`.
 - The server side owns: parsing uploads, computing transaction fingerprints,
-  calling the Claude API, running every computation (P&L, depreciation, EMI
+  calling the Gemini API, running every computation (P&L, depreciation, EMI
   matching, tax), and writing the audit log.
+- Mutations use **JSON API routes** under `app/api/*` with `requireSession()`,
+  not Server Actions — see existing `api/categories`, `api/import`, etc.
 
 ### 6.4 Database
 
@@ -568,17 +583,20 @@ the browser bundle.
 
 ### 6.5 The AI integration
 
-- **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) via the Anthropic API.
-- The API key lives **only on the backend server**, in an environment
-  variable, never in the frontend bundle. A key in frontend code is visible
-  to anyone who opens the browser dev tools.
-- Calls are **batched** — many transactions per request, not one call per
-  transaction — and use **prompt caching** for the static context (the
-  category tree, the instructions, the few-shot examples). See
-  `flow-transaction-import.md` for the request shape.
-- Use a normal synchronous call, **not** the asynchronous Batch API — the
-  Batch API is cheaper but can take minutes, which is wrong for an interactive
-  "upload and review now" flow.
+- **Google Gemini 3.1 Flash Lite** (default model id `gemini-3.1-flash-lite`)
+  via the [`@google/genai`](https://www.npmjs.com/package/@google/genai) SDK.
+  Override with `GEMINI_MODEL` in `.env` if AI Studio shows a different id
+  (e.g. `…-preview`).
+- Setup and ping test: **`docs/ai-setup.md`**. Code: `lib/ai/config.ts`,
+  `lib/ai/gemini-client.ts` (`generateGeminiText`, `generateGeminiJson`).
+- **`GEMINI_API_KEY`** lives only on the server, never in the frontend bundle.
+- **Categorization (planned):** batched `generateGeminiJson()` with
+  `responseJsonSchema` — one request for all Tier-2 transactions; strict JSON
+  per line including optional main-only category. See `flow-transaction-import.md`.
+- Use a normal synchronous generate call for the interactive import/review flow
+  (not a long-running async batch job).
+- **Status:** connection verified via `GET /api/ai/ping`; categorization pass
+  not implemented yet — see `implementation-status.md`.
 
 ### 6.6 Hosting & security
 
@@ -597,9 +615,9 @@ tax basis, security is designed in from the start, not patched on:
   connects to it.
 - **HTTPS everywhere.**
 - **Encryption at rest** for the database where the host supports it.
-- The **Claude API key** is server-side only (restated because it matters).
-- Secrets (DB credentials, Neon Auth URL/cookie secret, API key) live in
-  environment variables / a secrets manager, never in the repo.
+- The **Gemini API key** is server-side only (restated because it matters).
+- Secrets (DB credentials, Neon Auth URL/cookie secret, `GEMINI_API_KEY`) live
+  in environment variables / a secrets manager, never in the repo.
 
 A reasonable hosting shape: a managed Postgres instance + a small app server,
 on a single provider. Keep it boring — priority (3), cheap to run, and

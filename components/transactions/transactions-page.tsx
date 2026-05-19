@@ -1,13 +1,28 @@
-import { TransactionsActions } from "@/components/transactions/transactions-actions";
-import { TransactionsSummaryCards } from "@/components/transactions/transactions-summary-cards";
-import { TransactionsTable } from "@/components/transactions/transactions-table";
+import { TransactionsClient } from "@/components/transactions/transactions-client";
+import { loadAllSubCategoriesGrouped } from "@/lib/categories/load-sub-categories";
+import { loadMainCategories } from "@/lib/categories/load-main-categories";
+import { loadEntities } from "@/lib/entities/load-entities";
+import {
+  loadTransactionSummary,
+  loadTransactions,
+} from "@/lib/transactions/load-transactions";
 
-export function TransactionsPage() {
+export async function TransactionsPage() {
+  const [transactions, summary, mains, subsByMain, entities] = await Promise.all([
+    loadTransactions(),
+    loadTransactionSummary(),
+    loadMainCategories(),
+    loadAllSubCategoriesGrouped(),
+    loadEntities(),
+  ]);
+
   return (
-    <div className="flex min-w-0 w-full max-w-full flex-col gap-6">
-      <TransactionsActions />
-      <TransactionsSummaryCards />
-      <TransactionsTable />
-    </div>
+    <TransactionsClient
+      transactions={transactions}
+      summary={summary}
+      mains={mains}
+      subsByMain={subsByMain}
+      entities={entities}
+    />
   );
 }

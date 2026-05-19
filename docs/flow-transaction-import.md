@@ -1,9 +1,9 @@
 # Flow: Transaction Import & Categorization
 
-> **Last reviewed against code:** 2026-05-17 — design blueprint. The
-> **Transactions** page skeleton exists (filters including **Pending review**,
-> mock table); import, AI, fingerprint, and confirmation are not built yet.
-> Review queue UX is on `/transactions` (`/review` redirects there).
+> **Last reviewed against code:** 2026-05-19  
+> **Built:** Steps 1–3 (parse, dedupe, save `pending_review`). **Not built:** Steps 4–7
+> (AI, EMI match, review/confirm, lines). See `implementation-status.md`.  
+> Review queue UX is on `/transactions` (`/review` redirects there).  
 > Read `architecture.md` first. This flow assumes you understand the data
 > model (especially Transaction vs Transaction Line) and the governing
 > principle: **AI proposes, code computes, human confirms.**
@@ -36,7 +36,7 @@ data model as follows:
 | Date               | `transaction.date`               | drives everything date-related          |
 | Narration          | `transaction.raw_description`    | the AI cleans this into a description    |
 | Chq./Ref.No.       | `transaction.reference_no`       | often blank; one input to the fingerprint |
-| Value Dt           | (stored, minor)                  | the transaction date is what is used     |
+| Value Dt           | `transaction.value_date`         | stored; transaction date is primary      |
 | Withdrawal Amt.    | `amount` + `direction = debit`   | a value here → this is a debit           |
 | Deposit Amt.       | `amount` + `direction = credit`  | a value here → this is a credit          |
 | Closing Balance    | `transaction.closing_balance`    | feeds the fingerprint AND reconciliation |
@@ -46,11 +46,14 @@ parser both the amount and the direction. Other banks lay columns out
 differently; the parser uses the **bank account profile** on the **Assets**
 page to know which column is which.
 
+**Code:** `lib/import/parse-spreadsheet.ts`, `lib/import/load-column-mapping.ts`,
+`POST /api/import/parse`, `POST /api/import/confirm`, UI `components/dashboard/import-wizard.tsx`.
+
 ---
 
 ## The steps, in order
 
-### Step 1 — Parse the file into raw rows
+### Step 1 — Parse the file into raw rows ✅ built
 
 **What happens:** the uploaded CSV/Excel file is turned into a list of raw
 rows. Each row carries: date, amount, direction (from which of Withdrawal /
@@ -64,17 +67,16 @@ profile to map columns.
 categorization. Getting clean rows out of a file is hard enough on its own; do
 not entangle it with anything else.
 
-### Step 2 — De-duplicate via the transaction fingerprint
+### Step 2 — De-duplicate via the transaction fingerprint ✅ built
 
 **What happens:** for each parsed row, the app computes a **fingerprint** — a
-hash (e.g. SHA-256) over `source_account_id + date + amount + raw_description
-+ reference_no + closing_balance`. De-duplication is then handled by the
-database: there is a **unique index on `(source_account_id, fingerprint)`**,
-so inserting a row either succeeds (genuinely new) or is rejected by the
-constraint (already present).
+hash (SHA-256) over `source_account_id + date + amount + raw_description +
+reference_no + closing_balance`. Rows that match an existing
+`(source_account_id, fingerprint)` are flagged in the preview as duplicates and
+are not inserted again on confirm.
 
-**Where:** server side. The fingerprint is computed in app code; the
-uniqueness decision is made by the database index.
+**Where:** server side. `lib/import/fingerprint.ts`, unique index on
+`transactions (source_account_id, fingerprint)`.
 
 **Why this design:** the user re-uploads overlapping statements often
 (statements straddle month-ends). The fingerprint + unique index handles this
@@ -86,20 +88,31 @@ second bank account with overlapping dates, breaks it). The closing balance is
 deliberately in the fingerprint because a statement's running balance is
 effectively unique per transaction — see `architecture.md` §3.4.
 
-### Step 3 — Create the import batch and the transactions
+### Step 3 — Create the import batch and the transactions ✅ built
 
-**What happens:** the genuinely-new rows are saved as Transaction records
-with `status = pending_review`, all tagged with one `import_batch_id`. At this
-point they exist in the database but **do not yet affect the P&L or balance
-sheet** — only `confirmed` transactions do.
+**What happens:** the user-selected, non-duplicate rows are saved as Transaction
+records with `status = pending_review`, all tagged with one `import_batch_id`.
+At this point they exist in the database but **do not yet affect the P&L or
+balance sheet** — only `confirmed` transactions do. **No transaction lines**
+are written yet — category shows as Uncategorized on `/transactions`.
 
-**Where:** server side.
+**Where:** server side. `lib/import/import-mutations.ts`.
 
-### Step 4 — AI categorization pass
+### Step 4 — AI categorization pass ⏳ not built
 
 **What happens:** the pending transactions are sent to the AI to get proposed
-categorizations. For each transaction the AI proposes: a sub-category, an
-entity, a human-readable description, and a confidence score (0–1).
+categorizations. For each transaction the AI proposes:
+
+- **Category:** either a **sub-category id** (main implied) **or** a **main
+  category id only** when no sub is needed (e.g. Owner Contribution, Transfer).
+  Main-only and sub on the same line are **mutually exclusive** — see
+  `lib/transactions/line-category.ts`.
+- **Entity** (optional)
+- **Human-readable description**
+- **Confidence** score (0–1)
+
+Draft **transaction lines** are written (or updated) with these proposals. The
+transaction stays `pending_review` until the user confirms in Step 6.
 
 This is the **"AI proposes"** part of the governing principle. The AI is
 reading messy bank text and drafting suggestions. It is not deciding anything
@@ -107,32 +120,31 @@ final.
 
 **Two-tier design — most transactions should never reach the AI:**
 
-- **Tier 1 — rules / memory (no AI).** First, code checks each transaction
-  against previously-confirmed categorizations. If the user has categorized
-  "RAZORPAY PAYOUT" before, the merchant is matched and the category is filled
-  in instantly, deterministically, with high confidence. After the first month
-  or two this handles the large majority of transactions — recurring SaaS,
-  payouts, bank charges.
+- **Tier 1 — rules / memory (no AI).** ⏳ not built. First, code checks each
+  transaction against `learned_categorization_rules` and previously-confirmed
+  patterns. If the user has categorized "RAZORPAY PAYOUT" before, the merchant
+  is matched and the category is filled in instantly, deterministically, with
+  high confidence.
 - **Tier 2 — the AI model.** Only the genuinely new or ambiguous transactions
-  fall through to the Claude API.
+  fall through to the Gemini API.
 
 **How the AI call is made (important for performance):**
 
-- **Batched.** All Tier-2 transactions go in **one request** — "here are N
-  transactions, return a JSON array of N categorizations" — not one API call
-  per transaction. One round-trip instead of N.
-- **Synchronous**, normal API call. Not the async Batch API (that is cheaper
-  but can take minutes; wrong for an interactive flow).
-- **Prompt caching** on the static context: the category tree, the entity
-  list, the instructions, and a set of few-shot examples drawn from the user's
-  own recent confirmed categorizations. Mark that block with `cache_control`.
-  Every statement after the first reuses it — cheaper and faster.
-- The model is **Claude Haiku 4.5**. Categorization is classification; it does
-  not need a frontier model. Haiku is the cheapest current model and the
-  fastest.
+- **Provider:** **Google Gemini 3.1 Flash Lite** (`gemini-3.1-flash-lite` by
+  default). SDK: `@google/genai`. Setup: `docs/ai-setup.md`.
+- **Batched.** All Tier-2 transactions go in **one request** — return a JSON
+  array of N categorizations — not one API call per transaction.
+- **Structured output.** Use `generateGeminiJson()` with `responseMimeType:
+  application/json` and `responseJsonSchema` so the response parses reliably
+  (`lib/ai/gemini-client.ts`).
+- **Synchronous**, normal API call. Not a long-running async batch job (wrong for
+  an interactive "upload and review now" flow).
+- **Context in the prompt:** full category tree (mains + subs), entity list,
+  main-category `kind` / `pnl_sign`, descriptions, and few-shot examples from
+  recent confirmed categorizations when available.
 - The payload per transaction is tiny: date, amount, direction, raw
-  description. The response is strict JSON (instruct the model to return JSON
-  only, no preamble) so it parses cleanly.
+  description. Each array element includes `mainCategoryId` and/or
+  `subCategoryId`, `entityId`, `description`, `confidence`.
 
 **Description generation:** the description is proposed in this *same* call,
 not as a separate step — confirming category and description must be one
@@ -141,7 +153,10 @@ should be generated with the proposed category as context (a transaction
 known to be foreign income gets a smarter description than the raw text alone
 would yield).
 
-### Step 5 — EMI / loan auto-match (no AI)
+**Planned route:** e.g. `POST /api/categorize/run` (after import or on demand
+from Transactions).
+
+### Step 5 — EMI / loan auto-match (no AI) ⏳ not built
 
 **What happens:** before the transactions reach the human, code checks each
 one against open rows in every loan's amortization schedule. If a transaction
@@ -157,11 +172,14 @@ is a lookup, not a judgement.
 Transactions review queue it arrives *already split*, and the user just
 confirms the split rather than categorizing from scratch.
 
-### Step 6 — Review on Transactions (human confirmation)
+### Step 6 — Review on Transactions (human confirmation) ⏳ not built
 
 **What happens:** every pending transaction is presented to the user on the
 **Transactions** page (filter: **Pending review**) with its AI-proposed (or
 rule-matched, or EMI-pre-split) categorization. The user confirms or overrides.
+
+**Today:** the table lists imported rows from the DB with live amounts and
+filters, but there is no confirm/override UI yet.
 
 This is the **"human confirms"** part of the principle. **A transaction is not
 real for P&L purposes until it is confirmed here.**
@@ -173,21 +191,21 @@ real for P&L purposes until it is confirmed here.**
   between tolerable and painful.
 - The **confidence score drives the UX**: high-confidence items can be
   bulk-approved; low-confidence items get individual attention.
-- Confirming category, sub-category, entity, and description is **one action**.
+- Confirming category, sub-category (when used), main-only category, entity,
+  and description is **one action**.
 - For an EMI transaction, the user confirms the *pre-computed split* rather
   than picking a flat category.
 
 **Learning loop:** when the user *overrides* a suggestion, the app records the
 rule ("this merchant → this category/entity"). Next month that merchant is
 matched at Tier 1 and never reaches the AI. The pending-review queue shrinks
-over time as the app learns. A UI to view and edit learned rules is **deferred**
-(not on the Categories page in the current skeleton); the data model still
-expects rules to exist once Tier 1 is implemented.
+over time as the app learns. A UI to view and edit learned rules is **deferred**;
+the `learned_categorization_rules` table exists in the schema.
 
-### Step 7 — Write confirmed transactions; they become "real"
+### Step 7 — Write confirmed transactions; they become "real" ⏳ not built
 
 **What happens:** on confirmation, the transaction's `status` becomes
-`confirmed` and its Transaction Lines are written (one line for a simple
+`confirmed` and its Transaction Lines are finalized (one line for a simple
 transaction, multiple for a split). From this moment the transaction is
 included in the P&L and balance sheet computations.
 
@@ -209,14 +227,13 @@ to confirm imported items.
 ## What this flow assumes
 
 - Bank account profiles are configured on **Assets** (so the parser knows the
-  column layout).
-- **Entities** exist in the database and the user has selected one via the
-  **side-nav entity selector** (see `architecture.md` §5.1).
-- The **category tree** is maintained on **Categories** (main + sub-categories
-  only in the current UI).
-- Opening balances have been set (see `architecture.md` §4.1).
+  column layout). ✅ bank CRUD built
+- **Entities** exist in the database. ✅ CRUD built; entity filter on txn list ⏳
+- The **category tree** is maintained on **Categories**. ✅ CRUD built
+- Opening balances have been set (see `architecture.md` §4.1). ⏳ partial
 - Loan schedules already exist for any active loans (so Step 5 can match) —
-  see `flow-emi-split.md`.
+  see `flow-emi-split.md`. ⏳ not built
+- **`GEMINI_API_KEY`** in `.env` for Step 4. ✅ ping works; categorize ⏳
 
 ## What this flow deliberately does NOT do
 

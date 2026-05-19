@@ -1,6 +1,7 @@
 # Flow: Loans, the Amortization Schedule & the EMI Split
 
-> Last reviewed against code: not yet built — design blueprint.
+> **Last reviewed against code:** 2026-05-19 — design blueprint; not implemented.
+> See `implementation-status.md`.
 > Read `architecture.md` first. This flow is where the "AI proposes, code
 > computes" principle matters most concretely.
 

@@ -13,3 +13,11 @@ export type AccountCardSummary = {
   bankInstitution?: BankInstitution | null;
   accountType?: BankAccountType | null;
 };
+
+/** Bank account row for the import statement dialog picker. */
+export type ImportBankAccountOption = {
+  id: string;
+  nickname: string;
+  bankLabel: string;
+  bankInstitution: BankInstitution | null;
+};

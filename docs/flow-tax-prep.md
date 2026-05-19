@@ -1,6 +1,7 @@
 # Flow: Tax Preparation (ITR Figures)
 
-> Last reviewed against code: not yet built — design blueprint.
+> **Last reviewed against code:** 2026-05-19 — design blueprint; not implemented.
+> See `implementation-status.md`.
 > Read `architecture.md` first.
 >
 > **Important boundary:** this app *prepares figures*. It does not file taxes

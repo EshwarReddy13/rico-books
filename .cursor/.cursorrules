@@ -11,7 +11,7 @@ wrong. Read them before writing code.
 A single-user, hosted web app that turns bank transactions into a categorized
 P&L and a balance sheet, and prepares figures for filing an Indian ITR-3. It
 tags transactions by entity (multiple businesses). Built with Next.js (App
-Router), TypeScript, PostgreSQL, and Claude Haiku 4.5 for AI assistance.
+Router), TypeScript, PostgreSQL, and Google Gemini 3.1 Flash Lite for AI assistance.
 
 The full design lives in `/docs`. Read `/docs/architecture.md` first; each
 flow has its own `/docs/flow-*.md`. The docs are the source of truth for how
@@ -48,7 +48,7 @@ the app is meant to work.
    balance sheet only when `status = confirmed`. AI output is always a
    proposal awaiting human confirmation.
 
-6. **Server-side only for sensitive work.** Database access, the Claude API
+6. **Server-side only for sensitive work.** Database access, the Gemini API
    key, and all computation (P&L, depreciation, EMI matching, tax) live in
    server-side code — route handlers, server actions, server components.
    Never in a client component. The API key is never in the frontend bundle.

@@ -105,7 +105,8 @@ model MainCategory {
   kind        MainCategoryKind
   pnlSign     PnlSign?         @map("pnl_sign")
 
-  subCategories SubCategory[]
+  subCategories    SubCategory[]
+  transactionLines TransactionLine[]
 
   @@map("main_categories")
 }
@@ -212,21 +213,25 @@ model Transaction {
 }
 
 model TransactionLine {
-  id            String   @id @default(cuid())
-  transactionId String   @map("transaction_id")
-  amountPaise   BigInt   @map("amount_paise")
-  subCategoryId String?  @map("sub_category_id")
-  entityId      String?  @map("entity_id")
-  description   String   @default("")
-  confidence    Decimal? @db.Decimal(4, 3)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(cuid())
+  transactionId   String   @map("transaction_id")
+  amountPaise     BigInt   @map("amount_paise")
+  /// Set when categorizing at main level only (e.g. Owner Contribution). Mutually exclusive with subCategoryId.
+  mainCategoryId  String?  @map("main_category_id")
+  subCategoryId   String?  @map("sub_category_id")
+  entityId        String?  @map("entity_id")
+  description     String   @default("")
+  confidence      Decimal? @db.Decimal(4, 3)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  transaction Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  subCategory SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
-  entity      Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  transaction  Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  mainCategory MainCategory? @relation(fields: [mainCategoryId], references: [id], onDelete: SetNull)
+  subCategory  SubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  entity       Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
 
   @@index([transactionId])
+  @@index([mainCategoryId])
   @@index([subCategoryId])
   @@index([entityId])
   @@map("transaction_lines")

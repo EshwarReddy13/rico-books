@@ -4,10 +4,12 @@ import { Building2, ChevronDown, Pencil, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { EntityFormDialog } from "@/components/entities/entity-form-dialog";
+import {
+  SELECTED_ENTITY_CHANGED_EVENT,
+  SELECTED_ENTITY_STORAGE_KEY,
+} from "@/lib/dashboard/selected-entity";
 import type { EntitySummary } from "@/lib/entities/types";
 import { cn } from "@/lib/utils";
-
-const SELECTED_ENTITY_STORAGE_KEY = "rico-books-selected-entity-id";
 
 type DialogState =
   | { open: false }
@@ -56,6 +58,7 @@ export function NavEntitySelector({ entities }: { entities: EntitySummary[] }) {
 
   function selectEntity(entity: EntitySummary) {
     setSelectedId(entity.id);
+    window.dispatchEvent(new CustomEvent(SELECTED_ENTITY_CHANGED_EVENT));
     setOpen(false);
   }
 

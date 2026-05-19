@@ -2,52 +2,64 @@
 
 import { Calendar, CircleDollarSign, FileText } from "lucide-react";
 
-import { useCurrency } from "@/components/dashboard/currency-context";
-import { formatAmount } from "@/lib/dashboard/currency";
+import { formatInrFromPaise } from "@/lib/dashboard/currency";
+import type { TransactionSummary } from "@/lib/transactions/types";
 import { cn } from "@/lib/utils";
 
-const cards = [
+const cardConfig = [
   {
-    label: "Total Open",
-    countLabel: "0 Transactions",
-    amountUsd: 0,
+    key: "all" as const,
+    label: "Total",
     icon: CircleDollarSign,
     gradient:
       "bg-[linear-gradient(135deg,#dbeafe_0%,#e9d5ff_50%,#fce7f3_100%)]",
     iconClassName: "bg-white/80 text-violet-700",
   },
   {
-    label: "Pending Review",
-    countLabel: "0 Transactions",
-    amountUsd: 0,
+    key: "pendingReview" as const,
+    label: "Pending review",
     icon: FileText,
     gradient:
       "bg-[linear-gradient(135deg,#ccfbf1_0%,#fef3c7_50%,#fed7aa_100%)]",
     iconClassName: "bg-white/80 text-teal-700",
   },
   {
+    key: "confirmed" as const,
     label: "Confirmed",
-    countLabel: "0 Transactions",
-    amountUsd: 0,
     icon: Calendar,
     gradient:
       "bg-[linear-gradient(135deg,#fce7f3_0%,#fef9c3_50%,#ffedd5_100%)]",
     iconClassName: "bg-white/80 text-rose-600",
   },
-] as const;
+];
 
-export function TransactionsSummaryCards() {
-  const { currency } = useCurrency();
-
+export function TransactionsSummaryCards({
+  summary,
+  onPendingReviewClick,
+}: {
+  summary: TransactionSummary;
+  onPendingReviewClick?: () => void;
+}) {
   return (
     <section className="grid gap-3 sm:grid-cols-3">
-      {cards.map(
-        ({ label, countLabel, amountUsd, icon: Icon, gradient, iconClassName }) => (
-          <article
-            key={label}
+      {cardConfig.map(({ key, label, icon: Icon, gradient, iconClassName }) => {
+        const bucket = summary[key];
+        const countLabel = `${bucket.count} transaction${bucket.count === 1 ? "" : "s"}`;
+        const isPending = key === "pendingReview";
+        const clickable = isPending && onPendingReviewClick && bucket.count > 0;
+
+        const CardTag = clickable ? "button" : "article";
+
+        return (
+          <CardTag
+            key={key}
+            type={clickable ? "button" : undefined}
+            onClick={clickable ? onPendingReviewClick : undefined}
             className={cn(
-              "relative overflow-hidden rounded-2xl p-5 shadow-sm sm:rounded-3xl sm:p-6",
+              "relative overflow-hidden rounded-2xl p-5 text-left shadow-sm sm:rounded-3xl sm:p-6",
               gradient,
+              clickable &&
+                "cursor-pointer transition hover:ring-2 hover:ring-zinc-900/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900",
             )}
           >
             <span
@@ -60,13 +72,18 @@ export function TransactionsSummaryCards() {
             </span>
 
             <p className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">
-              {formatAmount(amountUsd, currency)}
+              {formatInrFromPaise(bucket.totalPaise)}
             </p>
             <p className="mt-1 text-sm font-medium text-zinc-800">{label}</p>
             <p className="mt-0.5 text-xs text-zinc-600">{countLabel}</p>
-          </article>
-        ),
-      )}
+            {clickable ? (
+              <p className="mt-2 text-xs font-medium text-teal-800">
+                Click to categorize →
+              </p>
+            ) : null}
+          </CardTag>
+        );
+      })}
     </section>
   );
 }

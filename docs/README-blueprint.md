@@ -7,16 +7,20 @@ should be able to read it and understand how the whole system works.
 ## Read in this order
 
 1. **`architecture.md`** — start here. What the app is, the core data model,
-   the one governing principle, the pages (including **§5.1** — current UI
-   shell), and the tech stack.
-2. **`flow-transaction-import.md`** — how money gets in and gets categorized.
+   the one governing principle, the pages (including **§5.1** — current UI),
+   and the tech stack.
+2. **`implementation-status.md`** — what is built vs planned (import slice 1,
+   Gemini connection, main-only categories, etc.). Read this before coding the
+   next slice.
+3. **`ai-setup.md`** — Gemini API key, model id, ping test, planned categorize contract.
+4. **`flow-transaction-import.md`** — how money gets in and gets categorized.
    The most-used flow.
-3. **`flow-emi-split.md`** — loans, the amortization schedule, the EMI
+5. **`flow-emi-split.md`** — loans, the amortization schedule, the EMI
    principal/interest split.
-4. **`flow-pnl-calculation.md`** — how the Profit & Loss number is produced.
-5. **`flow-balance-sheet.md`** — assets, depreciation, net worth, the
+6. **`flow-pnl-calculation.md`** — how the Profit & Loss number is produced.
+7. **`flow-balance-sheet.md`** — assets, depreciation, net worth, the
    financial-year roll-forward.
-6. **`flow-tax-prep.md`** — preparing the ITR figures, including the dual
+8. **`flow-tax-prep.md`** — preparing the ITR figures, including the dual
    presumptive-vs-actual computation.
 
 ## The one principle that governs everything
@@ -39,6 +43,9 @@ relevant doc (e.g. `// Transaction import flow — see
 docs/flow-transaction-import.md`).
 
 ## Scope reminder
+
+**Build progress** is tracked in `implementation-status.md` (import Steps 1–3
+done; Gemini connected; categorization next).
 
 v1 **includes**: statement import (CSV / Excel) + AI categorization +
 confirmation, the category tree, transaction splits, loans/EMI/amortization,
