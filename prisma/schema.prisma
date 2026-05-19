@@ -38,6 +38,27 @@ enum AssetType {
   other
 }
 
+enum BankAccountType {
+  current
+  savings
+  salary
+  fd
+  other
+}
+
+enum BankInstitution {
+  hdfc
+  icici
+  sbi
+  axis
+  kotak
+  idfc_first
+  yes
+  indusind
+  punjab_national
+  other
+}
+
 enum TransactionDirection {
   debit
   credit
@@ -130,11 +151,14 @@ model Account {
 
 /// Parser column mapping for a bank account (Settings — flow-transaction-import.md)
 model BankAccountProfile {
-  id             String @id @default(cuid())
-  accountId      String @unique @map("account_id")
-  bankName       String @default("") @map("bank_name")
+  id              String           @id @default(cuid())
+  accountId       String           @unique @map("account_id")
+  bankInstitution BankInstitution  @default(other) @map("bank_institution")
+  accountType     BankAccountType  @default(current) @map("account_type")
+  /// Display label denormalized from bankInstitution (legacy / import UI)
+  bankName        String           @default("") @map("bank_name")
   /// Column header names, e.g. { "date": "Date", "narration": "Narration", ... }
-  columnMapping  Json   @map("column_mapping")
+  columnMapping   Json             @map("column_mapping")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

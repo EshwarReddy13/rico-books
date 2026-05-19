@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useCurrency } from "@/components/dashboard/currency-context";
+import { formatBankAccountSubtitle } from "@/lib/accounts/bank-options";
 import { formatOpeningBalance } from "@/lib/accounts/format-balance";
 import { getAssetTypeLabel } from "@/lib/accounts/labels";
 import type { AccountCardSummary } from "@/lib/accounts/types";
@@ -70,16 +71,25 @@ function formatOpeningDate(iso: string | null) {
   }).format(new Date(`${iso}T12:00:00`));
 }
 
+function isEditableBankAsset(
+  account: AccountCardSummary,
+  variant: "asset" | "liability",
+) {
+  return variant === "asset" && account.assetType === "bank";
+}
+
 export function AccountRegisterGrid({
   accounts,
   variant,
   addLabel,
   onAdd,
+  onEditAccount,
 }: {
   accounts: AccountCardSummary[];
   variant: "asset" | "liability";
   addLabel: string;
   onAdd?: () => void;
+  onEditAccount?: (account: AccountCardSummary) => void;
 }) {
   const { currency } = useCurrency();
 
@@ -87,16 +97,18 @@ export function AccountRegisterGrid({
     <div className="grid min-w-0 w-full max-w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {accounts.map((account) => {
         const openingDate = formatOpeningDate(account.openingDate);
+        const editable =
+          onEditAccount && isEditableBankAsset(account, variant);
+        const cardClassName = cn(
+          "flex min-h-[10.5rem] min-w-0 flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm",
+          "dark:border-zinc-800 dark:bg-zinc-900",
+          "sm:rounded-3xl sm:p-5",
+          editable &&
+            "cursor-pointer text-left transition hover:border-zinc-300 hover:shadow-md dark:hover:border-zinc-600",
+        );
 
-        return (
-          <article
-            key={account.id}
-            className={cn(
-              "flex min-w-0 flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm",
-              "dark:border-zinc-800 dark:bg-zinc-900",
-              "sm:rounded-3xl sm:p-5",
-            )}
-          >
+        const cardBody = (
+          <>
             <div className="flex items-start gap-3">
               <AccountIcon variant={variant} assetType={account.assetType} />
               <div className="min-w-0 flex-1">
@@ -104,7 +116,12 @@ export function AccountRegisterGrid({
                   {account.name}
                 </h2>
                 <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  {getAssetTypeLabel(account.assetType)}
+                  {account.bankInstitution && account.accountType
+                    ? formatBankAccountSubtitle(
+                        account.bankInstitution,
+                        account.accountType,
+                      )
+                    : getAssetTypeLabel(account.assetType)}
                 </p>
               </div>
             </div>
@@ -122,6 +139,21 @@ export function AccountRegisterGrid({
                 </p>
               ) : null}
             </div>
+          </>
+        );
+
+        return editable ? (
+          <button
+            key={account.id}
+            type="button"
+            onClick={() => onEditAccount(account)}
+            className={cardClassName}
+          >
+            {cardBody}
+          </button>
+        ) : (
+          <article key={account.id} className={cardClassName}>
+            {cardBody}
           </article>
         );
       })}

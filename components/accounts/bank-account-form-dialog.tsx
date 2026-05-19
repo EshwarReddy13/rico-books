@@ -1,0 +1,322 @@
+"use client";
+
+import { Landmark, Trash2, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  apiCreateBankAccount,
+  apiDeleteBankAccount,
+  apiUpdateBankAccount,
+} from "@/lib/accounts/account-api";
+import {
+  BANK_ACCOUNT_TYPE_OPTIONS,
+  BANK_INSTITUTION_OPTIONS,
+} from "@/lib/accounts/bank-options";
+import { paiseToRupeeInput } from "@/lib/accounts/format-balance";
+import type { AccountCardSummary } from "@/lib/accounts/types";
+import { cn } from "@/lib/utils";
+
+const selectClassName = cn(
+  "h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none",
+  "focus-visible:border-violet-300 focus-visible:ring-2 focus-visible:ring-violet-300/40",
+  "disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950",
+);
+
+export function BankAccountFormDialog({
+  mode,
+  account,
+  onClose,
+}: {
+  mode: "create" | "edit";
+  account?: AccountCardSummary | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !pending) {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, pending]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const payload = {
+      name: (formData.get("name") as string).trim(),
+      bankInstitution: formData.get("bankInstitution") as string,
+      accountType: formData.get("accountType") as string,
+      openingBalance: ((formData.get("openingBalance") as string) ?? "").trim(),
+      openingDate: ((formData.get("openingDate") as string) ?? "").trim(),
+    };
+
+    let result;
+    if (mode === "create") {
+      result = await apiCreateBankAccount(payload);
+    } else if (!account) {
+      setPending(false);
+      setError("Account not found.");
+      return;
+    } else {
+      result = await apiUpdateBankAccount(account.id, payload);
+    }
+
+    setPending(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    router.refresh();
+    onClose();
+  }
+
+  async function handleDelete() {
+    if (!account) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+
+    const result = await apiDeleteBankAccount(account.id);
+
+    setPending(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    router.refresh();
+    onClose();
+  }
+
+  const title = mode === "create" ? "New bank account" : "Edit bank account";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="presentation"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
+        aria-label="Close dialog"
+        onClick={() => !pending && onClose()}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bank-account-dialog-title"
+        className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl sm:rounded-3xl sm:p-6 dark:bg-zinc-900"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+              <Landmark className="size-5" aria-hidden />
+            </span>
+            <div>
+              <h2
+                id="bank-account-dialog-title"
+                className="text-lg font-semibold text-zinc-950 dark:text-zinc-50"
+              >
+                {title}
+              </h2>
+              <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                {mode === "create"
+                  ? "Nickname this account for your books. Pick the bank and type below."
+                  : "Update nickname, bank, type, or opening balance."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+            aria-label="Close"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="bank-account-name">Nickname</Label>
+            <Input
+              id="bank-account-name"
+              name="name"
+              required
+              maxLength={120}
+              defaultValue={account?.name ?? ""}
+              placeholder="e.g. Personal savings"
+              disabled={pending}
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bank-institution">Bank</Label>
+            <select
+              id="bank-institution"
+              name="bankInstitution"
+              required
+              disabled={pending}
+              defaultValue={account?.bankInstitution ?? ""}
+              className={selectClassName}
+            >
+              <option value="" disabled>
+                Select bank
+              </option>
+              {BANK_INSTITUTION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bank-account-type">Account type</Label>
+            <select
+              id="bank-account-type"
+              name="accountType"
+              required
+              disabled={pending}
+              defaultValue={account?.accountType ?? ""}
+              className={selectClassName}
+            >
+              <option value="" disabled>
+                Select type
+              </option>
+              {BANK_ACCOUNT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="opening-balance">Opening balance (₹)</Label>
+              <Input
+                id="opening-balance"
+                name="openingBalance"
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                defaultValue={
+                  account ? paiseToRupeeInput(account.openingValuePaise) : ""
+                }
+                disabled={pending}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="opening-date">Opening date</Label>
+              <Input
+                id="opening-date"
+                name="openingDate"
+                type="date"
+                defaultValue={account?.openingDate ?? ""}
+                disabled={pending}
+                className="h-11"
+              />
+            </div>
+          </div>
+
+          {mode === "create" ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Statement import uses the standard HDFC column layout for now.
+            </p>
+          ) : null}
+
+          {error ? (
+            <p className="text-sm text-rose-600 dark:text-rose-400" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {!confirmDelete ? (
+            <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={onClose}
+                className="h-11 sm:min-w-[6rem]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={pending}
+                className="h-11 bg-zinc-950 text-white hover:bg-zinc-900 sm:min-w-[6rem]"
+              >
+                {pending
+                  ? "Saving…"
+                  : mode === "create"
+                    ? "Create account"
+                    : "Save changes"}
+              </Button>
+            </div>
+          ) : null}
+        </form>
+
+        {mode === "edit" && account ? (
+          <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+            {confirmDelete ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 sm:flex-1">
+                  Delete &quot;{account.name}&quot;? This cannot be undone.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={pending}
+                  onClick={handleDelete}
+                >
+                  {pending ? "Deleting…" : "Confirm delete"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                Delete bank account
+              </Button>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
