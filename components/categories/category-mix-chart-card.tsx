@@ -20,7 +20,7 @@ export function CategoryMixChartCard({
   const segments = subs.map((sub) => {
     const segment = {
       percent: sub.sharePercent,
-      strokeClassName: sub.strokeClassName,
+      colorHex: sub.colorHex,
       offset,
       name: sub.name,
     };
@@ -55,7 +55,7 @@ export function CategoryMixChartCard({
                   cy="18"
                   r="14"
                   fill="none"
-                  className={seg.strokeClassName}
+                  stroke={seg.colorHex}
                   strokeWidth="3"
                   pathLength={100}
                   strokeDasharray={`${seg.percent} 100`}
@@ -80,7 +80,8 @@ export function CategoryMixChartCard({
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`size-2 shrink-0 rounded-full ${sub.barClassName}`}
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: sub.colorHex }}
                     aria-hidden
                   />
                   <span className="truncate text-zinc-700">{sub.name}</span>

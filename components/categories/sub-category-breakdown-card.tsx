@@ -4,14 +4,19 @@ import { Plus } from "lucide-react";
 
 import { useCurrency } from "@/components/dashboard/currency-context";
 import { ReportCard, ReportCardHeader } from "@/components/reports/report-card";
+import { subCategoryBarStyle } from "@/lib/colors/hex-styles";
 import { formatAmount } from "@/lib/dashboard/currency";
 import type { SubCategoryBreakdown } from "@/lib/categories/types";
 import { cn } from "@/lib/utils";
 
 export function SubCategoryBreakdownCard({
   subs,
+  onAddSubCategory,
+  onEditSubCategory,
 }: {
   subs: SubCategoryBreakdown[];
+  onAddSubCategory?: () => void;
+  onEditSubCategory?: (sub: SubCategoryBreakdown) => void;
 }) {
   const { currency } = useCurrency();
 
@@ -22,6 +27,7 @@ export function SubCategoryBreakdownCard({
         action={
           <button
             type="button"
+            onClick={onAddSubCategory}
             className="inline-flex items-center gap-1 rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800"
           >
             <Plus className="size-3.5" aria-hidden />
@@ -39,15 +45,22 @@ export function SubCategoryBreakdownCard({
         <ul className="space-y-4">
           {subs.map((sub) => (
             <li key={sub.id}>
-              <button
-                type="button"
-                className="group w-full text-left"
-              >
+              <div className="w-full text-left">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-zinc-950 group-hover:text-violet-700">
-                      {sub.name}
-                    </p>
+                    {onEditSubCategory && !sub.id.startsWith("placeholder-") ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditSubCategory(sub)}
+                        className="truncate text-left text-sm font-semibold text-zinc-950 hover:text-violet-700"
+                      >
+                        {sub.name}
+                      </button>
+                    ) : (
+                      <p className="truncate text-sm font-semibold text-zinc-950">
+                        {sub.name}
+                      </p>
+                    )}
                     <p className="mt-0.5 text-xs text-zinc-500">
                       {sub.transactionCount} transaction
                       {sub.transactionCount === 1 ? "" : "s"}
@@ -62,11 +75,17 @@ export function SubCategoryBreakdownCard({
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
                   <div
-                    className={cn("h-full rounded-full", sub.barClassName)}
-                    style={{ width: `${sub.sharePercent}%` }}
+                    className={cn(
+                      "h-full rounded-full",
+                      sub.amountUsd > 0 ? "" : "opacity-40",
+                    )}
+                    style={{
+                      width: `${Math.max(sub.sharePercent, sub.amountUsd > 0 ? 4 : 0)}%`,
+                      ...subCategoryBarStyle(sub.colorHex),
+                    }}
                   />
                 </div>
-              </button>
+              </div>
             </li>
           ))}
         </ul>

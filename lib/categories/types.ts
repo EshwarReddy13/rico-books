@@ -8,12 +8,18 @@ export type MainCategorySummary = {
   subCategoryCount: number;
 };
 
-export type SubCategoryBreakdown = {
+export type SubCategorySummary = {
   id: string;
+  mainCategoryId: string;
   name: string;
+  description: string;
+  colorHex: string;
+  transactionCount: number;
+};
+
+export type SubCategoryBreakdown = SubCategorySummary & {
   amountUsd: number;
   sharePercent: number;
-  transactionCount: number;
   barClassName: string;
   strokeClassName: string;
 };

@@ -27,6 +27,12 @@ const SEGMENT_COLORS = [
   },
 ] as const;
 
+const PLACEHOLDER_SUB_BASE = {
+  mainCategoryId: "placeholder",
+  description: "",
+  colorHex: "#94a3b8",
+} as const;
+
 const viewsByMainName: Record<string, CategoryMainView> = {
   Income: {
     totalUsd: 4520,
@@ -35,6 +41,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
     pendingReviewCount: 3,
     subs: [
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "1",
         name: "Foreign Income",
         amountUsd: 3100,
@@ -43,6 +50,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
         ...SEGMENT_COLORS[0],
       },
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "2",
         name: "Domestic Income",
         amountUsd: 1420,
@@ -88,6 +96,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
     pendingReviewCount: 2,
     subs: [
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "1",
         name: "Software & Subscriptions",
         amountUsd: 2100,
@@ -96,6 +105,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
         ...SEGMENT_COLORS[0],
       },
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "2",
         name: "Loan Interest",
         amountUsd: 1800,
@@ -104,6 +114,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
         ...SEGMENT_COLORS[1],
       },
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "3",
         name: "Office & Admin",
         amountUsd: 1520,
@@ -112,6 +123,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
         ...SEGMENT_COLORS[2],
       },
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "4",
         name: "Travel",
         amountUsd: 1200,
@@ -120,6 +132,7 @@ const viewsByMainName: Record<string, CategoryMainView> = {
         ...SEGMENT_COLORS[3],
       },
       {
+        ...PLACEHOLDER_SUB_BASE,
         id: "5",
         name: "Other",
         amountUsd: 1800,
