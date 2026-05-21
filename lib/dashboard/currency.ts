@@ -19,8 +19,29 @@ export function formatInrFromPaise(paise: number): string {
   }).format(inr);
 }
 
+/** Format paise with optional USD display toggle. */
+export function formatAmountFromPaise(
+  paise: number,
+  currency: Currency,
+): string {
+  if (currency === "USD") {
+    const usd = paise / 100 / USD_TO_INR;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(usd);
+  }
+  return formatInrFromPaise(paise);
+}
+
+/** Legacy name: value is paise when sourced from metrics. */
+export function formatAmount(amountPaise: number, currency: Currency): string {
+  return formatAmountFromPaise(amountPaise, currency);
+}
+
 /** Skeleton helper: `amountUsd` is denominated in USD; converts when showing INR. */
-export function formatAmount(amountUsd: number, currency: Currency): string {
+export function formatAmountUsd(amountUsd: number, currency: Currency): string {
   if (currency === "USD") {
     return new Intl.NumberFormat("en-US", {
       style: "currency",

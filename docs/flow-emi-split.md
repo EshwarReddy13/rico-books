@@ -1,7 +1,8 @@
 # Flow: Loans, the Amortization Schedule & the EMI Split
 
-> **Last reviewed against code:** 2026-05-19 — design blueprint; not implemented.
-> See `implementation-status.md`.
+> **Last reviewed against code:** 2026-05-19 — **implemented** (schedule import, EMI
+> matcher, split categorize UI). Asset/loan linking and cost sync:
+> `flow-financed-vehicle.md`. See `implementation-status.md`.
 > Read `architecture.md` first. This flow is where the "AI proposes, code
 > computes" principle matters most concretely.
 

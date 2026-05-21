@@ -65,10 +65,17 @@ export function SubCategoryBreakdownCard({
                       {sub.transactionCount} transaction
                       {sub.transactionCount === 1 ? "" : "s"}
                     </p>
+                    {sub.linkedRecordId ? (
+                      <p className="mt-1 font-mono text-[10px] text-violet-600 dark:text-violet-400">
+                        Linked: {sub.linkedAccountName ?? "Account"} ·{" "}
+                        {sub.linkedRecordType} · {sub.linkedRecordId.slice(0, 8)}
+                        …
+                      </p>
+                    ) : null}
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-semibold text-zinc-950">
-                      {formatAmount(sub.amountUsd, currency)}
+                      {formatAmount(sub.amountPaise, currency)}
                     </p>
                     <p className="text-xs text-zinc-500">{sub.sharePercent}%</p>
                   </div>
@@ -77,10 +84,10 @@ export function SubCategoryBreakdownCard({
                   <div
                     className={cn(
                       "h-full rounded-full",
-                      sub.amountUsd > 0 ? "" : "opacity-40",
+                      sub.amountPaise > 0 ? "" : "opacity-40",
                     )}
                     style={{
-                      width: `${Math.max(sub.sharePercent, sub.amountUsd > 0 ? 4 : 0)}%`,
+                      width: `${Math.max(sub.sharePercent, sub.amountPaise > 0 ? 4 : 0)}%`,
                       ...subCategoryBarStyle(sub.colorHex),
                     }}
                   />

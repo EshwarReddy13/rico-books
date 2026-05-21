@@ -7,11 +7,11 @@ import type { SubCategoryBreakdown } from "@/lib/categories/types";
 
 export function CategoryMixChartCard({
   mainName,
-  totalUsd,
+  totalPaise,
   subs,
 }: {
   mainName: string;
-  totalUsd: number;
+  totalPaise: number;
   subs: SubCategoryBreakdown[];
 }) {
   const { currency } = useCurrency();
@@ -67,7 +67,7 @@ export function CategoryMixChartCard({
             <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
               <p className="text-xs text-zinc-500">{mainName}</p>
               <p className="text-lg font-semibold text-zinc-950 sm:text-xl">
-                {formatAmount(totalUsd, currency)}
+                {formatAmount(totalPaise, currency)}
               </p>
             </div>
           </div>

@@ -21,17 +21,17 @@ export function CategorySummaryStrip({
   main,
   period,
   onPeriodChange,
-  totalUsd,
+  totalPaise,
   transactionCount,
-  pendingReviewUsd,
+  pendingReviewPaise,
   pendingReviewCount,
 }: {
   main: MainCategorySummary;
   period: CategoryPeriod;
   onPeriodChange: (period: CategoryPeriod) => void;
-  totalUsd: number;
+  totalPaise: number;
   transactionCount: number;
-  pendingReviewUsd: number;
+  pendingReviewPaise: number;
   pendingReviewCount: number;
 }) {
   const { currency } = useCurrency();
@@ -74,7 +74,7 @@ export function CategorySummaryStrip({
               {isBalanceSheet ? "Activity" : "Total"}
             </p>
             <p className="text-2xl font-semibold tracking-tight text-zinc-950">
-              {formatAmount(totalUsd, currency)}
+              {formatAmount(totalPaise, currency)}
             </p>
             <p className="text-xs text-zinc-500">
               {transactionCount} transaction
@@ -86,7 +86,7 @@ export function CategorySummaryStrip({
 
       {pendingReviewCount > 0 ? (
         <p className="mt-3 text-xs text-amber-700">
-          {formatAmount(pendingReviewUsd, currency)} in {pendingReviewCount}{" "}
+          {formatAmount(pendingReviewPaise, currency)} in {pendingReviewCount}{" "}
           {pendingReviewCount === 1 ? "transaction" : "transactions"} awaiting
           review — not included in total above.
         </p>

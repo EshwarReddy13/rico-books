@@ -40,17 +40,32 @@ export async function generateGeminiJson<T>({
   systemInstruction,
   prompt,
   schema,
+  pdfBase64,
 }: {
   systemInstruction?: string;
   prompt: string;
   schema: Record<string, unknown>;
+  /** Optional PDF as base64 for document extraction. */
+  pdfBase64?: string;
 }): Promise<T> {
   const { model } = getGeminiConfig();
   const ai = getGeminiClient();
 
+  const contents = pdfBase64
+    ? [
+        {
+          role: "user" as const,
+          parts: [
+            { inlineData: { mimeType: "application/pdf", data: pdfBase64 } },
+            { text: prompt },
+          ],
+        },
+      ]
+    : prompt;
+
   const response = await ai.models.generateContent({
     model,
-    contents: prompt,
+    contents,
     config: {
       systemInstruction,
       responseMimeType: "application/json",

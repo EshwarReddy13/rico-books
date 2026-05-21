@@ -65,7 +65,7 @@ export function CategoryRecentCard({
                   </span>
                   <span className="flex shrink-0 items-center gap-2 sm:text-right">
                     <span className="text-sm font-semibold text-zinc-950">
-                      {formatAmount(item.amountUsd, currency)}
+                      {formatAmount(item.amountPaise, currency)}
                     </span>
                     <span
                       className={cn(

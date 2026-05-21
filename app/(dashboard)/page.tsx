@@ -1,5 +1,9 @@
 import { DashboardHome } from "@/components/dashboard/dashboard-home";
+import { loadEntities } from "@/lib/entities/load-entities";
 
-export default function DashboardPage() {
-  return <DashboardHome />;
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const entities = await loadEntities();
+  return <DashboardHome entities={entities} />;
 }

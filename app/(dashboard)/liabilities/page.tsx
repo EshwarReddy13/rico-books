@@ -1,10 +1,18 @@
 import { LiabilitiesPage } from "@/components/accounts/liabilities-page";
-import { loadLiabilities } from "@/lib/accounts/load-accounts";
+import {
+  loadFinancableAssets,
+  loadLiabilities,
+} from "@/lib/accounts/load-accounts";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const accounts = await loadLiabilities();
+  const [accounts, financableAssets] = await Promise.all([
+    loadLiabilities(),
+    loadFinancableAssets(),
+  ]);
 
-  return <LiabilitiesPage accounts={accounts} />;
+  return (
+    <LiabilitiesPage accounts={accounts} financableAssets={financableAssets} />
+  );
 }

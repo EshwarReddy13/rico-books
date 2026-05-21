@@ -1,15 +1,17 @@
 "use client";
 
-import { Download, SlidersHorizontal } from "lucide-react";
+import { Download, Search, SlidersHorizontal, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { formatInrFromPaise } from "@/lib/dashboard/currency";
 import { DateSortToggle } from "@/components/transactions/date-sort-toggle";
 import {
   sortTransactionsByDate,
   type DateSortOrder,
 } from "@/lib/transactions/sort-transactions";
+import { transactionMatchesSearch } from "@/lib/transactions/transaction-description";
 import type {
   TransactionListRow,
   TransactionStatus,
@@ -43,21 +45,31 @@ export function TransactionsTable({
   dateSortOrder,
   onDateSortOrderChange,
   onStartCategorize,
+  onSelectTransaction,
 }: {
   transactions: TransactionListRow[];
   dateSortOrder: DateSortOrder;
   onDateSortOrderChange: () => void;
   onStartCategorize?: () => void;
+  onSelectTransaction?: (row: TransactionListRow) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredRows = useMemo(() => {
-    const filtered =
+    let filtered =
       statusFilter === "all"
         ? transactions
         : transactions.filter((row) => row.status === statusFilter);
+
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((row) =>
+        transactionMatchesSearch(row, searchQuery),
+      );
+    }
+
     return sortTransactionsByDate(filtered, dateSortOrder);
-  }, [transactions, statusFilter, dateSortOrder]);
+  }, [transactions, statusFilter, dateSortOrder, searchQuery]);
 
   const sectionTitle =
     statusFilter === "pending_review"
@@ -71,7 +83,32 @@ export function TransactionsTable({
       <div className="flex flex-col gap-4 border-b border-zinc-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
         <h2 className="text-lg font-semibold text-zinc-950">{sectionTitle}</h2>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="relative w-full sm:w-56 lg:w-64">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search description…"
+              className="h-9 w-full pr-9 pl-9 text-sm"
+              aria-label="Search transactions by description"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
           {filters.map(({ id, label }) => (
             <button
               key={id}
@@ -105,6 +142,7 @@ export function TransactionsTable({
             <Download className="size-3.5" aria-hidden />
             Export all
           </button>
+          </div>
         </div>
       </div>
 
@@ -114,7 +152,9 @@ export function TransactionsTable({
             <p>
               {transactions.length === 0
                 ? "No transactions yet. Import a bank statement to get started."
-                : "No transactions match this filter."}
+                : searchQuery.trim()
+                  ? "No transactions match your search."
+                  : "No transactions match this filter."}
             </p>
             {statusFilter === "pending_review" &&
             onStartCategorize &&
@@ -137,7 +177,7 @@ export function TransactionsTable({
                   <span className="sr-only">Select</span>
                 </th>
                 <th className="px-3 py-3 font-medium">Date</th>
-                <th className="px-3 py-3 font-medium">Entity</th>
+                <th className="px-3 py-3 font-medium">Description</th>
                 <th className="px-3 py-3 font-medium">Status</th>
                 <th className="px-3 py-3 font-medium">Amount</th>
                 <th className="px-3 py-3 font-medium">Reference</th>
@@ -151,9 +191,21 @@ export function TransactionsTable({
                 return (
                   <tr
                     key={row.id}
-                    className="border-b border-zinc-50 last:border-0"
+                    className={cn(
+                      "border-b border-zinc-50 last:border-0",
+                      onSelectTransaction &&
+                        "cursor-pointer transition hover:bg-zinc-50/80",
+                    )}
+                    onClick={
+                      onSelectTransaction
+                        ? () => onSelectTransaction(row)
+                        : undefined
+                    }
                   >
-                    <td className="px-4 py-4 sm:px-6">
+                    <td
+                      className="px-4 py-4 sm:px-6"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Checkbox
                         aria-label={`Select ${row.referenceNo}`}
                       />
@@ -161,22 +213,23 @@ export function TransactionsTable({
                     <td className="whitespace-nowrap px-3 py-4 text-zinc-700">
                       {row.dateLabel}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="max-w-[280px] px-3 py-4">
                       <div className="flex items-center gap-2.5">
                         <span
                           className="flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700"
                           aria-hidden
-                          title={row.rawDescription}
                         >
                           {row.entityInitials}
                         </span>
                         <span
-                          className="max-w-[200px] truncate font-medium text-zinc-950"
-                          title={row.rawDescription}
+                          className="min-w-0 truncate font-medium text-zinc-950"
+                          title={
+                            row.lineDescription.trim()
+                              ? `${row.description}\nBank: ${row.rawDescription}`
+                              : row.description
+                          }
                         >
-                          {row.entityName === "—"
-                            ? row.rawDescription
-                            : row.entityName}
+                          {row.description}
                         </span>
                       </div>
                     </td>

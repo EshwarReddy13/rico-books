@@ -7,15 +7,12 @@ import {
   loadCategorizationContext,
   loadTransactionsForAiCategorization,
 } from "@/lib/ai/load-categorization-context";
+import {
+  AI_CATEGORIZATION_SYSTEM_INSTRUCTION,
+  AI_CATEGORIZATION_USER_PROMPT_FOOTER,
+} from "@/lib/ai/categorization-instructions";
 import { validateLineCategoryAssignment } from "@/lib/transactions/line-category";
 import { prisma } from "@/lib/prisma";
-
-const SYSTEM_INSTRUCTION = `You categorize bank transactions for an Indian business bookkeeping app.
-Return strict JSON only. Use only category and entity ids from the provided lists.
-For each transaction set either subCategoryId OR mainCategoryId, never both.
-Use mainCategoryId only when the main category has mainOnly true (no sub-categories).
-Descriptions should be short, human-readable labels for the books (not raw bank text).
-Confidence is 0 to 1.`;
 
 function formatInr(paise: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -97,12 +94,14 @@ ${JSON.stringify(
 ## Transactions to categorize (${txnPayload.length} items)
 ${JSON.stringify(txnPayload, null, 2)}
 
+${AI_CATEGORIZATION_USER_PROMPT_FOOTER}
+
 Return a JSON object with key "proposals": an array with one entry per transactionId listed above.`;
 
   let parsed: AiCategorizationResponse;
   try {
     parsed = await generateGeminiJson<AiCategorizationResponse>({
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction: AI_CATEGORIZATION_SYSTEM_INSTRUCTION,
       prompt,
       schema: {
         type: Type.OBJECT,
@@ -153,6 +152,11 @@ Return a JSON object with key "proposals": an array with one entry per transacti
   for (const proposal of parsed.proposals ?? []) {
     const txn = txnById.get(proposal.transactionId);
     if (!txn) {
+      skippedCount += 1;
+      continue;
+    }
+
+    if (txn.matchedScheduleRow || txn.lines.length > 1) {
       skippedCount += 1;
       continue;
     }

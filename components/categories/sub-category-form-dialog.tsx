@@ -159,6 +159,18 @@ export function SubCategoryFormDialog({
           </button>
         </div>
 
+        {sub?.linkedRecordId ? (
+          <p className="mt-4 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-200">
+            Linked to register account{" "}
+            <span className="font-medium">
+              {sub.linkedAccountName ?? sub.name}
+            </span>{" "}
+            ({sub.linkedRecordType}) ·{" "}
+            <span className="font-mono">{sub.linkedRecordId}</span>. Edit the
+            asset or liability on its page; name stays in sync.
+          </p>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="sub-category-name">Name</Label>
@@ -169,7 +181,7 @@ export function SubCategoryFormDialog({
               maxLength={120}
               defaultValue={sub?.name ?? ""}
               placeholder="e.g. Foreign Income"
-              disabled={pending}
+              disabled={pending || Boolean(sub?.linkedRecordId)}
               className="h-11"
             />
           </div>
@@ -226,7 +238,7 @@ export function SubCategoryFormDialog({
           ) : null}
         </form>
 
-        {mode === "edit" && sub ? (
+        {mode === "edit" && sub && !sub.linkedRecordId ? (
           <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
             {confirmDelete ? (
               <div className="flex flex-col gap-2 sm:flex-row">

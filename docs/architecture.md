@@ -493,8 +493,8 @@ change when features are wired:
 | Transactions  | Review queue (`pending_review`) + confirmed ledger; categorize, confirm, edit | `flow-transaction-import.md`  |
 | Reports       | P&L statement, net worth, ITR-prep view, tax profile for the year, export | `flow-pnl-calculation.md`, `flow-tax-prep.md` |
 | Categories    | Main + sub-category tree only (CRUD, descriptions for AI context)      | `architecture.md` §3.2         |
-| Assets        | Asset accounts (bank, vehicle, …), bank import profiles, opening balances | `flow-balance-sheet.md`       |
-| Liabilities   | Liability accounts, loans, amortization schedules, EMI setup             | `flow-emi-split.md`, `flow-balance-sheet.md` |
+| Assets        | Asset accounts (bank, vehicle, …), linked loan, down payments, cost sync   | `flow-financed-vehicle.md`, `flow-balance-sheet.md` |
+| Liabilities   | Liability accounts, loans, schedules, repayment viewer, outstanding      | `flow-financed-vehicle.md`, `flow-emi-split.md`, `flow-balance-sheet.md` |
 | Settings      | User profile, preferences, auth-related options (not ledger data)         | —                             |
 
 **Entity** records (§3.1) are created/edited via the side-nav entity selector
@@ -642,7 +642,8 @@ the doc and vice versa.
 ## 7. Where to go next
 
 - To understand how money gets *in* and gets *categorized*: `flow-transaction-import.md`
-- To understand the car / loan / EMI machinery: `flow-emi-split.md`
+- To understand the car / loan / down payment / cost sync: `flow-financed-vehicle.md`
+- To understand EMI matching and principal/interest splits: `flow-emi-split.md`
 - To understand how the P&L number is produced: `flow-pnl-calculation.md`
 - To understand assets, depreciation, net worth, year-end: `flow-balance-sheet.md`
 - To understand the ITR figure preparation: `flow-tax-prep.md`

@@ -15,10 +15,13 @@ export type SubCategorySummary = {
   description: string;
   colorHex: string;
   transactionCount: number;
+  linkedRecordId: string | null;
+  linkedRecordType: "asset" | "liability" | null;
+  linkedAccountName: string | null;
 };
 
 export type SubCategoryBreakdown = SubCategorySummary & {
-  amountUsd: number;
+  amountPaise: number;
   sharePercent: number;
   barClassName: string;
   strokeClassName: string;
@@ -30,16 +33,16 @@ export type CategoryRecentTransaction = {
   description: string;
   subCategory: string;
   entity: string;
-  amountUsd: number;
+  amountPaise: number;
   status: "confirmed" | "pending_review";
 };
 
 export type CategoryPeriod = "This FY" | "This month" | "Last month";
 
 export type CategoryMainView = {
-  totalUsd: number;
+  totalPaise: number;
   transactionCount: number;
-  pendingReviewUsd: number;
+  pendingReviewPaise: number;
   pendingReviewCount: number;
   subs: SubCategoryBreakdown[];
   recent: CategoryRecentTransaction[];

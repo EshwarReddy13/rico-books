@@ -11,10 +11,16 @@ import {
 import { CategorizeWorkspace } from "@/components/transactions/categorize-workspace";
 import { TransactionsActions } from "@/components/transactions/transactions-actions";
 import { TransactionsSummaryCards } from "@/components/transactions/transactions-summary-cards";
+import { TransactionDetailDialog } from "@/components/transactions/transaction-detail-dialog";
 import { TransactionsTable } from "@/components/transactions/transactions-table";
 import type { MainCategorySummary, SubCategorySummary } from "@/lib/categories/types";
+import { useSelectedEntityId } from "@/lib/dashboard/selected-entity";
 import type { EntitySummary } from "@/lib/entities/types";
 import { buildInitialAiProgress } from "@/lib/transactions/ai-categorize-progress";
+import {
+  filterTransactionsByEntity,
+  summaryFromTransactionRows,
+} from "@/lib/transactions/filter-by-entity";
 import type { AiCategorizeProgress } from "@/lib/transactions/ai-categorize-progress";
 import { apiResetPendingCategorization } from "@/lib/transactions/categorize-api";
 import { runAiCategorizeBatched } from "@/lib/transactions/run-ai-categorize-batched";
@@ -22,23 +28,18 @@ import {
   toggleDateSortOrder,
   type DateSortOrder,
 } from "@/lib/transactions/sort-transactions";
-import type {
-  TransactionListRow,
-  TransactionSummary,
-} from "@/lib/transactions/types";
+import type { TransactionListRow } from "@/lib/transactions/types";
 
 type ViewMode = "list" | "categorize";
 type CategorizeTarget = "workspace" | "dialog";
 
 export function TransactionsClient({
   transactions,
-  summary,
   mains,
   subsByMain,
   entities,
 }: {
   transactions: TransactionListRow[];
-  summary: TransactionSummary;
   mains: MainCategorySummary[];
   subsByMain: Record<string, SubCategorySummary[]>;
   entities: EntitySummary[];
@@ -51,6 +52,9 @@ export function TransactionsClient({
     null,
   );
   const [dateSortOrder, setDateSortOrder] = useState<DateSortOrder>("desc");
+  const [detailTransactionId, setDetailTransactionId] = useState<
+    string | null
+  >(null);
 
   const [modePromptOpen, setModePromptOpen] = useState(false);
   const [modePromptPending, setModePromptPending] = useState(false);
@@ -65,18 +69,42 @@ export function TransactionsClient({
     useState<CategorizeTarget>("workspace");
   const urlPromptHandled = useRef(false);
   const aiAbortRef = useRef<AbortController | null>(null);
+  const selectedEntityId = useSelectedEntityId(entities);
+  const selectedEntityName =
+    entities.find((e) => e.id === selectedEntityId)?.name ?? null;
+
+  const entityFilteredTransactions = useMemo(
+    () => filterTransactionsByEntity(transactions, selectedEntityId),
+    [transactions, selectedEntityId],
+  );
+
+  const entityFilteredSummary = useMemo(
+    () => summaryFromTransactionRows(entityFilteredTransactions),
+    [entityFilteredTransactions],
+  );
+
+  const detailTransaction = useMemo(
+    () =>
+      detailTransactionId
+        ? entityFilteredTransactions.find((t) => t.id === detailTransactionId) ??
+          null
+        : null,
+    [detailTransactionId, entityFilteredTransactions],
+  );
 
   function handleDateSortToggle() {
     setDateSortOrder((prev) => toggleDateSortOrder(prev));
   }
 
   const pendingForPrompt = useMemo(() => {
-    let rows = transactions.filter((t) => t.status === "pending_review");
+    let rows = entityFilteredTransactions.filter(
+      (t) => t.status === "pending_review",
+    );
     if (modePromptBatchId) {
       rows = rows.filter((t) => t.importBatchId === modePromptBatchId);
     }
     return rows;
-  }, [transactions, modePromptBatchId]);
+  }, [entityFilteredTransactions, modePromptBatchId]);
 
   function requestCategorize(
     target: CategorizeTarget,
@@ -187,23 +215,33 @@ export function TransactionsClient({
   return (
     <>
       <div className="flex min-w-0 w-full max-w-full flex-col gap-6">
+        {selectedEntityName ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Showing transactions for{" "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              {selectedEntityName}
+            </span>
+            . Change entity in the side nav.
+          </p>
+        ) : null}
         <TransactionsActions
           onCategorizeDialogOpen={() => requestCategorize("dialog")}
         />
         <TransactionsSummaryCards
-          summary={summary}
+          summary={entityFilteredSummary}
           onPendingReviewClick={() => requestCategorize("workspace")}
         />
         {viewMode === "list" ? (
           <TransactionsTable
-            transactions={transactions}
+            transactions={entityFilteredTransactions}
             dateSortOrder={dateSortOrder}
             onDateSortOrderChange={handleDateSortToggle}
             onStartCategorize={() => requestCategorize("workspace")}
+            onSelectTransaction={(row) => setDetailTransactionId(row.id)}
           />
         ) : (
           <CategorizeWorkspace
-            transactions={transactions}
+            transactions={entityFilteredTransactions}
             mains={mains}
             subsByMain={subsByMain}
             entities={entities}
@@ -235,9 +273,19 @@ export function TransactionsClient({
         }}
       />
 
+      {detailTransaction ? (
+        <TransactionDetailDialog
+          transaction={detailTransaction}
+          mains={mains}
+          subsByMain={subsByMain}
+          entities={entities}
+          onClose={() => setDetailTransactionId(null)}
+        />
+      ) : null}
+
       {categorizeDialogOpen ? (
         <CategorizeDialog
-          transactions={transactions}
+          transactions={entityFilteredTransactions}
           mains={mains}
           subsByMain={subsByMain}
           entities={entities}

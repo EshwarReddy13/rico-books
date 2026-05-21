@@ -2,15 +2,14 @@ import { TransactionsClient } from "@/components/transactions/transactions-clien
 import { loadAllSubCategoriesGrouped } from "@/lib/categories/load-sub-categories";
 import { loadMainCategories } from "@/lib/categories/load-main-categories";
 import { loadEntities } from "@/lib/entities/load-entities";
-import {
-  loadTransactionSummary,
-  loadTransactions,
-} from "@/lib/transactions/load-transactions";
+import { repairEmiSplitLines } from "@/lib/loans/repair-emi-split-lines";
+import { loadTransactions } from "@/lib/transactions/load-transactions";
 
 export async function TransactionsPage() {
-  const [transactions, summary, mains, subsByMain, entities] = await Promise.all([
+  await repairEmiSplitLines();
+
+  const [transactions, mains, subsByMain, entities] = await Promise.all([
     loadTransactions(),
-    loadTransactionSummary(),
     loadMainCategories(),
     loadAllSubCategoriesGrouped(),
     loadEntities(),
@@ -19,7 +18,6 @@ export async function TransactionsPage() {
   return (
     <TransactionsClient
       transactions={transactions}
-      summary={summary}
       mains={mains}
       subsByMain={subsByMain}
       entities={entities}

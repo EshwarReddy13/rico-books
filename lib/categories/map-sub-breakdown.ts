@@ -9,7 +9,7 @@ export function mapSubBreakdownFromDb(
 ): SubCategoryBreakdown[] {
   return dbSubs.map((sub) => ({
     ...sub,
-    amountUsd: 0,
+    amountPaise: 0,
     sharePercent: 0,
     barClassName: "",
     strokeClassName: "",

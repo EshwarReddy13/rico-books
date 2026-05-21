@@ -9,6 +9,9 @@ import {
 import { useState } from "react";
 
 import { ImportDialog } from "@/components/dashboard/import-dialog";
+import { useCurrency } from "@/components/dashboard/currency-context";
+import { formatAmount } from "@/lib/dashboard/currency";
+import { cn } from "@/lib/utils";
 
 function ActionButton({
   label,
@@ -57,37 +60,78 @@ export function ActionWidget() {
   );
 }
 
-export function ExpensesMayWidget() {
+const BAR_COLORS = ["bg-teal-400", "bg-emerald-300", "bg-violet-400"] as const;
+
+export function ExpensesMonthWidget({
+  data,
+}: {
+  data: {
+    monthLabel: string;
+    totalPaise: number;
+    topSubs: { name: string; amountPaise: number; sharePercent: number }[];
+  } | null;
+}) {
+  const { currency } = useCurrency();
+  const subs = data?.topSubs ?? [];
+
   return (
     <article className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5 dark:bg-zinc-900">
-      <p className="text-sm text-zinc-500">Expenses in May</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-        $1262,22
+      <p className="text-sm text-zinc-500">
+        Expenses in {data?.monthLabel ?? "this month"}
       </p>
-      <div className="mt-4 flex h-2 overflow-hidden rounded-full">
-        <span className="w-[45%] bg-teal-400" />
-        <span className="w-[30%] bg-emerald-300" />
-        <span className="w-[25%] bg-violet-400" />
-      </div>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+        {data != null ? formatAmount(data.totalPaise, currency) : "—"}
+      </p>
+      {subs.length > 0 ? (
+        <div className="mt-4 flex h-2 overflow-hidden rounded-full">
+          {subs.map((sub, i) => (
+            <span
+              key={sub.name}
+              className={BAR_COLORS[i] ?? "bg-zinc-300"}
+              style={{ width: `${sub.sharePercent}%` }}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-zinc-400">No expenses this month</p>
+      )}
     </article>
   );
 }
 
-export function FavoriteSpendsWidget() {
+export function FavoriteSpendsWidget({
+  spends,
+}: {
+  spends: { name: string; amountPaise: number; initials: string }[];
+}) {
+  const avatarColors = [
+    "bg-sky-500",
+    "bg-amber-400",
+    "bg-rose-400",
+    "bg-violet-500",
+  ] as const;
+
   return (
     <article className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5 dark:bg-zinc-900">
-      <p className="text-sm text-zinc-500">Favorite spends</p>
-      <div className="mt-4 flex items-center gap-2">
-        <span className="flex size-10 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white">
-          VK
-        </span>
-        <span className="flex size-10 items-center justify-center rounded-full bg-amber-400 text-lg">
-          👻
-        </span>
-        <span className="flex size-10 items-center justify-center rounded-full bg-rose-400 text-xs font-bold text-white">
-          S
-        </span>
-      </div>
+      <p className="text-sm text-zinc-500">Top expense categories</p>
+      {spends.length === 0 ? (
+        <p className="mt-4 text-xs text-zinc-400">No expenses this month</p>
+      ) : (
+        <div className="mt-4 flex items-center gap-2">
+          {spends.map((spend, i) => (
+            <span
+              key={spend.name}
+              title={spend.name}
+              className={cn(
+                "flex size-10 items-center justify-center rounded-full text-xs font-bold text-white",
+                avatarColors[i] ?? "bg-zinc-500",
+              )}
+            >
+              {spend.initials}
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }

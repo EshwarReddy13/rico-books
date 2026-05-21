@@ -59,6 +59,8 @@ export function CategoryPickerPanel({
   description,
   onDescriptionChange,
   aiSuggestion,
+  descriptionPending,
+  descriptionError,
   disabled,
 }: {
   mains: MainCategorySummary[];
@@ -68,6 +70,8 @@ export function CategoryPickerPanel({
   description: string;
   onDescriptionChange: (value: string) => void;
   aiSuggestion?: { confidence: number | null } | null;
+  descriptionPending?: boolean;
+  descriptionError?: string | null;
   disabled?: boolean;
 }) {
   const router = useRouter();
@@ -271,16 +275,38 @@ export function CategoryPickerPanel({
           ) : null}
 
           <div className="mt-5 space-y-1.5">
-            <Label htmlFor="categorize-description">Description</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="categorize-description">Description</Label>
+              {descriptionPending ? (
+                <span className="inline-flex items-center gap-1 text-xs text-violet-600">
+                  <Sparkles className="size-3" aria-hidden />
+                  Generating…
+                </span>
+              ) : null}
+            </div>
             <textarea
               id="categorize-description"
-              disabled={disabled}
+              disabled={disabled || descriptionPending}
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
               rows={2}
               className="w-full resize-none rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              placeholder="Short label for your books"
+              placeholder={
+                descriptionPending
+                  ? "AI is writing a short label…"
+                  : "Short label for your books (auto-updates when category changes)"
+              }
             />
+            {descriptionError ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {descriptionError} You can still type a description manually.
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-500">
+                Updates automatically when you pick a category. Edit anytime
+                before saving.
+              </p>
+            )}
           </div>
         </div>
       </div>

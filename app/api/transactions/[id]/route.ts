@@ -21,6 +21,7 @@ export async function PATCH(
     entityId?: string | null;
     description?: string;
     confirm?: boolean;
+    confirmOnly?: boolean;
   };
 
   try {
@@ -36,6 +37,7 @@ export async function PATCH(
     entityId: body.entityId,
     description: body.description,
     confirm: body.confirm,
+    confirmOnly: body.confirmOnly,
   });
 
   if (result.error) {

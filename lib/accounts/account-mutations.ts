@@ -119,8 +119,23 @@ export async function deleteBankAccountRecord(
     };
   }
 
+  const sub = await prisma.subCategory.findFirst({
+    where: { linkedRecordId: id },
+    include: { _count: { select: { transactionLines: true } } },
+  });
+  if (sub && sub._count.transactionLines > 0) {
+    return {
+      error: `This account's category has ${sub._count.transactionLines} transaction line${sub._count.transactionLines === 1 ? "" : "s"}. Reassign them before deleting.`,
+    };
+  }
+
   try {
-    await prisma.account.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      if (sub) {
+        await tx.subCategory.delete({ where: { id: sub.id } });
+      }
+      await tx.account.delete({ where: { id } });
+    });
     return { success: true };
   } catch (error) {
     console.error("[deleteBankAccountRecord]", error);

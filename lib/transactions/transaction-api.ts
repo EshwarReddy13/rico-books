@@ -4,6 +4,7 @@ export type SaveCategorizationPayload = {
   entityId?: string | null;
   description?: string;
   confirm?: boolean;
+  confirmOnly?: boolean;
 };
 
 async function parseJson<T>(response: Response): Promise<T & { error?: string }> {
@@ -35,6 +36,49 @@ export async function apiSaveTransactionCategorization(
     body: JSON.stringify(payload),
     credentials: "same-origin",
     redirect: "manual",
+  });
+
+  return parseJson(response);
+}
+
+export async function apiBulkConfirmHighConfidence(input: {
+  transactionIds: string[];
+  minConfidence?: number;
+  entityId?: string | null;
+}): Promise<{
+  success?: boolean;
+  error?: string;
+  confirmedCount?: number;
+  skippedCount?: number;
+}> {
+  const response = await fetch("/api/transactions/bulk-confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "same-origin",
+    redirect: "manual",
+  });
+
+  return parseJson(response);
+}
+
+export async function apiSuggestLineDescription(
+  input: {
+    rawDescription: string;
+    categoryLabel: string;
+    amountInr: string;
+    direction: "debit" | "credit";
+    entityName?: string | null;
+  },
+  signal?: AbortSignal,
+): Promise<{ description?: string; error?: string }> {
+  const response = await fetch("/api/transactions/suggest-description", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "same-origin",
+    redirect: "manual",
+    signal,
   });
 
   return parseJson(response);

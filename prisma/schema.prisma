@@ -126,6 +126,7 @@ model SubCategory {
   learnedRules     LearnedCategorizationRule[]
 
   @@unique([mainCategoryId, name])
+  @@unique([linkedRecordId, linkedRecordType])
   @@map("sub_categories")
 }
 
@@ -142,10 +143,12 @@ model Account {
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
 
-  bankProfile        BankAccountProfile?
-  sourceTransactions Transaction[]       @relation("SourceAccount")
-  importBatches      ImportBatch[]
-  loan               Loan?
+  bankProfile              BankAccountProfile?
+  sourceTransactions       Transaction[]       @relation("SourceAccount")
+  importBatches            ImportBatch[]
+  loan                       Loan?
+  financedLoans              Loan[]              @relation("FinancedAsset")
+  linkedTransactionLines     TransactionLine[]   @relation("LinkedAccount")
 
   @@map("accounts")
 }
@@ -222,18 +225,23 @@ model TransactionLine {
   entityId        String?  @map("entity_id")
   description     String   @default("")
   confidence      Decimal? @db.Decimal(4, 3)
+  /// Register link copied from sub-category at confirm (asset or liability account).
+  linkedAccountId   String?           @map("linked_account_id")
+  linkedAccountType LinkedRecordType? @map("linked_account_type")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  transaction  Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  mainCategory MainCategory? @relation(fields: [mainCategoryId], references: [id], onDelete: SetNull)
-  subCategory  SubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
-  entity       Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  mainCategory  MainCategory? @relation(fields: [mainCategoryId], references: [id], onDelete: SetNull)
+  subCategory   SubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  entity        Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  linkedAccount Account?      @relation("LinkedAccount", fields: [linkedAccountId], references: [id], onDelete: SetNull)
 
   @@index([transactionId])
   @@index([mainCategoryId])
   @@index([subCategoryId])
   @@index([entityId])
+  @@index([linkedAccountId])
   @@map("transaction_lines")
 }
 
@@ -242,6 +250,8 @@ model TransactionLine {
 model Loan {
   id                    String    @id @default(cuid())
   liabilityAccountId    String    @unique @map("liability_account_id")
+  /// Vehicle / equipment this loan financed (optional).
+  financedAssetAccountId String?  @map("financed_asset_account_id")
   agreementNo           String    @default("") @map("agreement_no")
   lender                String    @default("")
   loanType              String    @default("") @map("loan_type")
@@ -254,9 +264,11 @@ model Loan {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  liabilityAccount Account           @relation(fields: [liabilityAccountId], references: [id], onDelete: Restrict)
-  scheduleRows     LoanScheduleRow[]
+  liabilityAccount     Account           @relation(fields: [liabilityAccountId], references: [id], onDelete: Restrict)
+  financedAssetAccount Account?          @relation("FinancedAsset", fields: [financedAssetAccountId], references: [id], onDelete: SetNull)
+  scheduleRows         LoanScheduleRow[]
 
+  @@index([financedAssetAccountId])
   @@map("loans")
 }
 

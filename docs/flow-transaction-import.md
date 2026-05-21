@@ -1,7 +1,8 @@
 # Flow: Transaction Import & Categorization
 
 > **Last reviewed against code:** 2026-05-19  
-> **Built:** Steps 1–3 (parse, dedupe, save `pending_review`). **Not built:** Steps 4–7
+> **Built:** Steps 1–4 and 6–7 (through import, AI categorize, human confirm).
+> **Not built:** Step 5 (EMI auto-match), Tier 1 learned rules.
 > (AI, EMI match, review/confirm, lines). See `implementation-status.md`.  
 > Review queue UX is on `/transactions` (`/review` redirects there).  
 > Read `architecture.md` first. This flow assumes you understand the data
@@ -98,7 +99,7 @@ are written yet — category shows as Uncategorized on `/transactions`.
 
 **Where:** server side. `lib/import/import-mutations.ts`.
 
-### Step 4 — AI categorization pass ⏳ not built
+### Step 4 — AI categorization pass ✅ built
 
 **What happens:** the pending transactions are sent to the AI to get proposed
 categorizations. For each transaction the AI proposes:
@@ -139,6 +140,10 @@ final.
   (`lib/ai/gemini-client.ts`).
 - **Synchronous**, normal API call. Not a long-running async batch job (wrong for
   an interactive "upload and review now" flow).
+- **Credit ≠ Income.** The prompt tells the model that `direction: credit` only
+  means a bank deposit — refunds, reversals, and chargebacks should use **Expense**
+  (`pnl_sign: expense`) when they offset a spend, not Income by default. See
+  `lib/ai/categorization-instructions.ts`.
 - **Context in the prompt:** full category tree (mains + subs), entity list,
   main-category `kind` / `pnl_sign`, descriptions, and few-shot examples from
   recent confirmed categorizations when available.
@@ -172,14 +177,15 @@ is a lookup, not a judgement.
 Transactions review queue it arrives *already split*, and the user just
 confirms the split rather than categorizing from scratch.
 
-### Step 6 — Review on Transactions (human confirmation) ⏳ not built
+### Step 6 — Review on Transactions (human confirmation) ✅ built
 
 **What happens:** every pending transaction is presented to the user on the
 **Transactions** page (filter: **Pending review**) with its AI-proposed (or
 rule-matched, or EMI-pre-split) categorization. The user confirms or overrides.
 
-**Today:** the table lists imported rows from the DB with live amounts and
-filters, but there is no confirm/override UI yet.
+**Today:** `CategorizeWorkspace` on `/transactions` — category picker, AI
+suggestion badge, entity filter from side nav, bulk approve ≥ 90% confidence,
+keyboard shortcuts (Enter, ↑↓, s).
 
 This is the **"human confirms"** part of the principle. **A transaction is not
 real for P&L purposes until it is confirmed here.**
@@ -202,7 +208,7 @@ matched at Tier 1 and never reaches the AI. The pending-review queue shrinks
 over time as the app learns. A UI to view and edit learned rules is **deferred**;
 the `learned_categorization_rules` table exists in the schema.
 
-### Step 7 — Write confirmed transactions; they become "real" ⏳ not built
+### Step 7 — Write confirmed transactions; they become "real" ✅ built
 
 **What happens:** on confirmation, the transaction's `status` becomes
 `confirmed` and its Transaction Lines are finalized (one line for a simple

@@ -27,5 +27,7 @@ export type ImportConfirmResult = {
   error?: string;
   importedCount?: number;
   skippedDuplicateCount?: number;
+  /** EMIs auto-matched to loan schedule on import. */
+  emiMatchedCount?: number;
   batchId?: string;
 };

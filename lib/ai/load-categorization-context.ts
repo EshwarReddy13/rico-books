@@ -33,12 +33,14 @@ export async function loadTransactionsForAiCategorization(filters: {
   }
 
   return prisma.transaction.findMany({
-    where,
+    where: {
+      ...where,
+      matchedScheduleRow: null,
+    },
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     include: {
       sourceAccount: { select: { name: true } },
       lines: {
-        take: 1,
         orderBy: { createdAt: "asc" },
         select: {
           id: true,
@@ -47,6 +49,7 @@ export async function loadTransactionsForAiCategorization(filters: {
           subCategoryId: true,
         },
       },
+      matchedScheduleRow: { select: { id: true } },
     },
   });
 }

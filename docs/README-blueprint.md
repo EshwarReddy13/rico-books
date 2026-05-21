@@ -17,10 +17,12 @@ should be able to read it and understand how the whole system works.
    The most-used flow.
 5. **`flow-emi-split.md`** — loans, the amortization schedule, the EMI
    principal/interest split.
-6. **`flow-pnl-calculation.md`** — how the Profit & Loss number is produced.
-7. **`flow-balance-sheet.md`** — assets, depreciation, net worth, the
+6. **`flow-financed-vehicle.md`** — linking a vehicle asset to a loan, down
+   payments, auto cost sync, schedule and down-payment viewers.
+7. **`flow-pnl-calculation.md`** — how the Profit & Loss number is produced.
+8. **`flow-balance-sheet.md`** — assets, depreciation, net worth, the
    financial-year roll-forward.
-8. **`flow-tax-prep.md`** — preparing the ITR figures, including the dual
+9. **`flow-tax-prep.md`** — preparing the ITR figures, including the dual
    presumptive-vs-actual computation.
 
 ## The one principle that governs everything

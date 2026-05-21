@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 import { MAIN_CATEGORY_SEED_COLORS } from "../lib/colors/palette";
+import { seedSystemSubCategories } from "../lib/categories/seed-system-subs";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -68,6 +69,9 @@ async function main() {
   }
 
   console.log(`Seeded ${mainCategories.length} main categories.`);
+
+  await seedSystemSubCategories();
+  console.log("Seeded system sub-categories.");
 }
 
 main()

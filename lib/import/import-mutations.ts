@@ -1,4 +1,5 @@
 import type { ImportConfirmRow, ImportConfirmResult } from "@/lib/import/types";
+import { matchEmiTransactionsOnImport } from "@/lib/loans/match-emi-on-import";
 import { prisma } from "@/lib/prisma";
 
 export async function confirmImportBatch(input: {
@@ -81,17 +82,19 @@ export async function confirmImportBatch(input: {
         },
       });
 
-      if (entityId && importedCount > 0) {
-        const imported = await tx.transaction.findMany({
-          where: { importBatchId: batch.id },
-          select: {
-            id: true,
-            amountPaise: true,
-            rawDescription: true,
-            lines: { select: { id: true }, take: 1 },
-          },
-        });
+      const imported = await tx.transaction.findMany({
+        where: { importBatchId: batch.id },
+        select: {
+          id: true,
+          amountPaise: true,
+          rawDescription: true,
+          lines: { select: { id: true }, take: 1 },
+        },
+      });
 
+      const importedIds = imported.map((t) => t.id);
+
+      if (entityId && imported.length > 0) {
         const withoutLine = imported.filter((t) => t.lines.length === 0);
         if (withoutLine.length > 0) {
           await tx.transactionLine.createMany({
@@ -105,7 +108,17 @@ export async function confirmImportBatch(input: {
         }
       }
 
-      return { batchId: batch.id, importedCount, skippedDuplicateCount };
+      const emiMatchedCount = await matchEmiTransactionsOnImport(
+        tx,
+        importedIds,
+      );
+
+      return {
+        batchId: batch.id,
+        importedCount,
+        skippedDuplicateCount,
+        emiMatchedCount,
+      };
     });
 
     return {
