@@ -10,14 +10,16 @@ import { MainCategoryFormDialog } from "@/components/categories/main-category-fo
 import { SubCategoryBreakdownCard } from "@/components/categories/sub-category-breakdown-card";
 import { SubCategoryFormDialog } from "@/components/categories/sub-category-form-dialog";
 import { useSelectedEntityId } from "@/lib/dashboard/selected-entity";
-import { mapSubBreakdownFromDb } from "@/lib/categories/map-sub-breakdown";
+import {
+  mapSubBreakdownFromDb,
+  mergeSubBreakdown,
+} from "@/lib/categories/map-sub-breakdown";
 import type {
   CategoryPeriod,
   MainCategorySummary,
   SubCategorySummary,
 } from "@/lib/categories/types";
 import type { EntitySummary } from "@/lib/entities/types";
-import { mergeSubBreakdown } from "@/lib/metrics/compute-category-metrics";
 import { fetchCategoryMetrics } from "@/lib/metrics/metrics-api";
 import type { CategoryMainMetrics } from "@/lib/metrics/types";
 
